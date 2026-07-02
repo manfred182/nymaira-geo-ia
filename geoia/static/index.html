@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Nymaira - GEO IA: Asistente catastral y geoespacial colombiano con análisis SIG en tiempo real">
+  <title>Nymaira - GEO IA - Catastral y Geoespacial Colombiano</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  
+  <style>
+    /* ========== DESIGN TOKENS ========== */
+    :root {
+      --bg: #0b0f17;
+      --bg-card: #131825;
+      --bg-sidebar: #0d111c;
+      --bg-hover: #1a2235;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --text-muted: #475569;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --accent-bg: rgba(56, 189, 248, 0.08);
+      --green: #22c55e;
+      --red: #ef4444;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      --transition: all 0.15s ease;
+    }
+
+    /* ========== RESET ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0f1a;
+      color: var(--text);
+      display: flex;
+      overflow: hidden;
+      position: relative;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ========== LAYOUT ========== */
+    .main-container {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: relative;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0px;
+      padding: 10px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .sidebar-brand .brand-logo {
+      width: 280px;
+      height: 280px;
+      flex-shrink: 0;
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: brightness(1.1) contrast(1.1);
+      margin-bottom: -90px;
+    }
+
+    .sidebar-brand h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+    }
+
+    .sidebar-brand .version {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 10px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav button {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: var(--transition);
+      width: 100%;
+    }
+
+    .sidebar-nav button:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .sidebar-nav button:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .sidebar-nav button.active {
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .sidebar-nav button .icon {
+      font-size: 1.1rem;
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav .nav-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      padding: 16px 14px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    .sidebar-footer a {
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .sidebar-footer a:hover,
+    .sidebar-footer a:focus {
+      color: var(--accent);
+    }
+
+    /* ========== MAIN CONTENT ========== */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      min-height: 52px;
+    }
+
+    .topbar h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--green);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ========== CARDS ========== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p.desc {
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    /* ========== FORM ELEMENTS ========== */
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      padding-right: 30px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2364748b' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0b0f17;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover,
+    .btn-secondary:focus {
+      background: var(--border);
+      border-color: var(--text-dim);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: none;
+      padding: 6px 10px;
+    }
+
+    .btn-ghost:hover,
+    .btn-ghost:focus {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+    /* ========== CHAT ========== */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 120px);
+    }
+
+    .welcome-banner {
+      padding: 40px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+      max-width: 2500px;
+      margin: 0 auto;
+      width: 100%;
+      background: #0a1628;
+      z-index: 1;
+    }
+
+    .welcome-banner.hidden {
+      display: none;
+    }
+
+    .welcome-banner .chat-msg {
+      max-width: 85%;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+      align-self: center;
+      text-align: center;
+    }
+
+    .background-display {
+      display: none !important;
+    }
+
+    .background-display::before {
+      display: none !important;
+    }
+
+    .background-display.hidden {
+      display: none;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 20px;
+      margin: 0 auto 12px auto;
+      justify-content: flex-start;
+      align-items: stretch;
+      text-align: left;
+      max-width: 3500px;
+      width: 100%;
+    }
+
+    .chat-msg {
+      padding: 12px 16px;
+      border-radius: 14px;
+      max-width: 82%;
+      word-wrap: break-word;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .chat-msg.user {
+      background: #1a2940;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      text-align: left;
+    }
+
+    .chat-msg.bot {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      text-align: left;
+    }
+
+    .chat-msg.system {
+      background: transparent;
+      align-self: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-style: italic;
+      max-width: 90%;
+    }
+
+    .chat-msg.loading {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .chat-msg.error {
+      border-color: var(--red);
+      color: #f87171;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 6px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      margin: auto auto 0 auto;
+      background: #0a1628;
+      border-radius: 12px;
+      align-items: center;
+      max-width: 2500px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .chat-input-row input {
+      background: var(--bg-card);
+      border-color: var(--border);
+      flex: 1;
+    }
+
+    .chat-input-row input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-upload {
+      font-size: 1.2rem;
+      padding: 6px 8px;
+      line-height: 1;
+    }
+
+    .file-label {
+      font-size: 0.8rem;
+      color: var(--accent);
+      background: var(--accent-bg);
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .file-label:hover {
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    /* ========== MODELS GRID ========== */
+    .model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .model-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .model-card .status-icon {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+
+    .model-card .status-ok {
+      color: var(--green);
+    }
+
+    .model-card .status-no {
+      color: var(--red);
+    }
+
+    .model-card .name {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      word-break: break-word;
+    }
+
+    .model-card .sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ========== COORDINATES ========== */
+    .coords-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .coords-pair input {
+      padding: 8px 10px;
+      font-size: 0.85rem;
+    }
+
+    .coords-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .coords-header span {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+    }
+
+    /* ========== FILE DROP ========== */
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .file-drop:hover,
+    .file-drop.dragover {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+
+    .file-drop .icon {
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+
+    .file-drop p {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .file-drop .hint {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      margin-top: 4px;
+    }
+
+    /* ========== RESPONSE BOX ========== */
+    .response-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      white-space: pre-wrap;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      min-height: 40px;
+      word-break: break-word;
+    }
+
+    .response-box.error {
+      border-color: var(--red);
+      color: #f87171;
+    }
+
+    .response-box.loading {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    /* ========== TAGS ========== */
+    .tag {
+      display: inline-block;
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin: 2px 4px 2px 0;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .tag:hover {
+      background: rgba(56, 189, 248, 0.15);
+    }
+
+    /* ========== UTILITIES ========== */
+    .flex-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .flex {
+      display: flex;
+      gap: 8px;
+    }
+
+    .gap {
+      gap: 8px;
+    }
+
+    .mb-1 {
+      margin-bottom: 12px;
+    }
+
+    .mt-1 {
+      margin-top: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ========== MAP ========== */
+    .geo-map {
+      height: 400px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      background: var(--bg);
+    }
+
+    /* ========== CHIPS DE SUGERENCIA ========== */
+    .chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 4px;
+    }
+    .chip-btn {
+      background: rgba(56,189,248,0.07);
+      color: var(--accent);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 16px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+    .chip-btn:hover {
+      background: rgba(56,189,248,0.18);
+      border-color: var(--accent);
+    }
+
+    /* ========== WELCOME MESSAGE ========== */
+    .welcome-msg {
+      background: linear-gradient(135deg, rgba(56,189,248,0.05) 0%, rgba(129,140,248,0.05) 100%);
+      border: 1px solid rgba(56,189,248,0.15);
+    }
+    .welcome-header {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .welcome-caps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .welcome-caps span {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    /* ========== BOTONES GEO EN RESPUESTAS ========== */
+    .geo-btn-row { margin-top: 10px; }
+    .geo-action {
+      font-size: 0.8rem !important;
+      padding: 5px 14px !important;
+      border: 1px solid rgba(56,189,248,0.3) !important;
+      border-radius: 8px !important;
+      background: rgba(56,189,248,0.08) !important;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .geo-action:hover { background: rgba(56,189,248,0.18) !important; }
+
+    /* ========== TYPING ANIMATION ========== */
+    .typing-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      padding: 2px 0;
+    }
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.4;
+      animation: typing-bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .cursor-blink {
+      display: inline-block;
+      color: var(--accent);
+      animation: blink 0.8s step-end infinite;
+      font-weight: 300;
+      margin-left: 1px;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* ── Markdown dentro de mensajes bot ── */
+    .chat-msg.bot h1, .chat-msg.bot h2, .chat-msg.bot h3 {
+      color: var(--accent);
+      margin: 10px 0 4px;
+      font-size: 0.95rem;
+    }
+    .chat-msg.bot h3 { font-size: 0.88rem; }
+    .chat-msg.bot p { margin: 4px 0; }
+    .chat-msg.bot ul, .chat-msg.bot ol { padding-left: 18px; margin: 4px 0; }
+    .chat-msg.bot li { margin: 2px 0; }
+    .chat-msg.bot code {
+      background: rgba(56,189,248,0.1);
+      color: var(--accent);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.82rem;
+      font-family: 'Consolas', monospace;
+    }
+    .chat-msg.bot pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      overflow-x: auto;
+      margin: 6px 0;
+      font-size: 0.8rem;
+    }
+    .chat-msg.bot pre code { background: none; padding: 0; }
+    .chat-msg.bot table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 6px 0;
+      font-size: 0.82rem;
+    }
+    .chat-msg.bot th, .chat-msg.bot td {
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      text-align: left;
+    }
+    .chat-msg.bot th { background: var(--bg); color: var(--accent); }
+    .chat-msg.bot strong { color: var(--accent); }
+    .chat-msg.bot a { color: var(--accent2); }
+    .chat-msg.bot blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 10px;
+      color: var(--text-dim);
+      margin: 6px 0;
+    }
+
+    /* ========== SCROLL ========== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* ========== TAB SYSTEM ========== */
+    .tab {
+      display: none;
+    }
+
+    .tab.active {
+      display: block;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 60px;
+        min-width: 60px;
+      }
+
+      .sidebar-brand h1,
+      .sidebar-brand .version,
+      .sidebar-nav button span:not(.icon),
+      .nav-label,
+      .sidebar-footer {
+        display: none;
+      }
+
+      .sidebar-nav button {
+        justify-content: center;
+        padding: 10px;
+        font-size: 1.1rem;
+      }
+
+      .sidebar-brand {
+        padding: 16px 8px;
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .chat-msg {
+        max-width: 92%;
+      }
+
+      .model-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sidebar {
+        width: 48px;
+        min-width: 48px;
+      }
+
+      .sidebar-nav button {
+        padding: 8px;
+      }
+
+      .content {
+        padding: 10px;
+      }
+
+      .chat-msg {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" role="navigation" aria-label="Navegación principal">
+    <div class="sidebar-brand">
+      <img class="brand-logo" src="/static/logo-ia.png" alt="Nymaira - GEO IA logo" loading="lazy">
+      <h1>Nymaira - GEO IA</h1>
+      <span class="version">v0.1</span>
+    </div>
+    <nav class="sidebar-nav" role="tablist">
+      <div class="nav-label">Módulos</div>
+      <button class="active" data-tab="chatbot" role="tab" aria-selected="true" aria-controls="tab-chatbot">
+        <span class="icon">💬</span> <span>Chat</span>
+      </button>
+      <button data-tab="rag" role="tab" aria-selected="false" aria-controls="tab-rag">
+        <span class="icon">📄</span> <span>Documentos</span>
+      </button>
+      <button data-tab="geo" role="tab" aria-selected="false" aria-controls="tab-geo">
+        <span class="icon">🛰️</span> <span>Geo IA</span>
+      </button>
+      <button data-tab="automation" role="tab" aria-selected="false" aria-controls="tab-automation">
+        <span class="icon">📐</span> <span>Validación</span>
+      </button>
+      <button data-tab="search" role="tab" aria-selected="false" aria-controls="tab-search">
+        <span class="icon">🔍</span> <span>Web Search</span>
+      </button>
+      <button data-tab="colombia" role="tab" aria-selected="false" aria-controls="tab-colombia">
+        <span class="icon">🇨🇴</span> <span>Colombia</span>
+      </button>
+      <div class="nav-label">Sistema</div>
+      <button data-tab="models" role="tab" aria-selected="false" aria-controls="tab-models">
+        <span class="icon">🧠</span> <span>Modelos</span>
+      </button>
+      <button onclick="window.open('/docs','_blank')" aria-label="Abrir documentación API">
+        <span class="icon">📘</span> <span>API Docs</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span style="color:var(--text-muted)">offline</span>
+      <a href="https://github.com" target="_blank" rel="noopener noreferrer">código abierto</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-container">
+    <div class="main">
+      <header class="topbar">
+        <h2 id="topbar-title">Chat</h2>
+        <div class="status-badge" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>conectado</span>
+        </div>
+      </header>
+      <div class="content" id="main-content" role="main">
+        <!-- CHAT -->
+        <section id="tab-chatbot" class="tab active" role="tabpanel" aria-labelledby="tab-chatbot">
+          <div class="card" style="padding:0;background:none;border:none;box-shadow:none">
+             <div class="chat-area">
+               <div class="welcome-banner" id="welcome-banner"></div>
+               <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Historial de chat"></div>
+              <div class="chat-input-row">
+                <button class="btn btn-ghost btn-upload" onclick="document.getElementById('chat-file-input').click()" title="Adjuntar archivo" aria-label="Adjuntar archivo">📎</button>
+                <button class="btn btn-ghost btn-upload" id="mic-btn" onclick="toggleMic()" title="Grabar voz" aria-label="Grabar mensaje de voz">🎤</button>
+                <input type="file" id="chat-file-input" accept=".txt,.csv,.json,.geojson,.pdf,.xlsx,.xls,.shp,.dbf,.prj,.shx,.kml,.kmz,.gdb,.jpg,.jpeg,.png,.tif,.tiff,.py" style="display:none" onchange="uploadChatFile(this)" aria-label="Seleccionar archivo para adjuntar">
+                <input type="text" id="chat-input" placeholder="Escribe tu consulta aquí..." autofocus aria-label="Mensaje de chat" onkeypress="if(event.key==='Enter') sendChat()">
+                <span id="chat-file-label" class="file-label hidden" onclick="clearChatFile()" role="button" tabindex="0" aria-label="Archivo adjunto"></span>
+                <input type="hidden" id="chat-geojson" value="">
+                <button class="btn btn-primary" id="send-btn" onclick="sendChat()" aria-label="Enviar mensaje">Enviar</button>
+                <button class="btn btn-ghost" onclick="resetChat()" title="Nueva conversación" aria-label="Iniciar nueva conversación">↺</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RAG -->
+        <section id="tab-rag" class="tab" role="tabpanel" aria-labelledby="tab-rag">
+          <div class="card">
+            <h3>📄 Búsqueda en Documentos <span style="font-weight:400;color:var(--text-dim);font-size:.8rem">RAG</span></h3>
+            <p class="desc">Consulta documentos catastrales indexados con IA</p>
+            <div class="flex-row mb-1">
+              <input type="file" id="rag-file" accept=".txt,.pdf,.md" style="display:none" onchange="ingestDoc(this)" aria-label="Subir documento">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('rag-file').click()" aria-label="Subir documento RAG">+ Subir documento</button>
+              <span id="rag-status" style="color:var(--text-dim);font-size:.82rem" aria-live="polite"></span>
+            </div>
+            <textarea id="rag-query" placeholder="Ej: ¿Cuál es el procedimiento para corrección de área?" aria-label="Consulta RAG"></textarea>
+            <div class="flex-row mt-1">
+              <button class="btn btn-primary" onclick="queryRag()" aria-label="Ejecutar consulta RAG">Consultar</button>
+            </div>
+            <div id="rag-response" class="response-box mt-1" aria-live="polite"></div>
+            <div id="rag-sources" style="margin-top:6px"></div>
+          </div>
+        </section>
+
+        <!-- GEO -->
+        <section id="tab-geo" class="tab" role="tabpanel" aria-labelledby="tab-geo">
+          <!-- Datos Geoespaciales -->
+          <div class="card">
+            <h3>🛰️ Datos Geoespaciales</h3>
+            <p class="desc">Sube archivos SIG (SHP, KML, KMZ, GDB, GeoJSON, GeoPackage, GeoTIFF, CSV con coordenadas) y visualizalos en el mapa. Consulta capas WFS/WMS de entidades colombianas.</p>
+            <div class="flex flex-wrap mb-1">
+              <input type="file" id="geo-vector-file" accept=".geojson,.json,.kml,.kmz,.gpkg,.zip,.shp,.dbf,.prj,.shx,.gdb,.csv,.xlsx,.xls" style="display:none" onchange="uploadGeoVector(this)" aria-label="Subir archivo vectorial">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('geo-vector-file').click()" aria-label="Subir datos vectoriales">📂 Subir Vector</button>
+              <input type="file" id="geo-raster-file" accept=".tif,.tiff" style="display:none" onchange="uploadGeoRaster(this)" aria-label="Subir archivo raster">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('geo-raster-file').click()" aria-label="Subir datos raster">🖼️ Subir Raster</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearGeoMap()" aria-label="Limpiar mapa">🗑️ Limpiar</button>
+            </div>
+            <div id="geo-upload-status" style="color:var(--text-dim);font-size:.85rem;margin-bottom:8px" aria-live="polite"></div>
+            <div id="geo-map" class="geo-map" role="img" aria-label="Mapa interactivo de datos geoespaciales"></div>
+            <div id="geo-data-info" style="font-size:.82rem;color:var(--text-dim);margin-bottom:8px"></div>
+            <div class="flex flex-wrap mb-1">
+              <button class="btn btn-ghost btn-sm" onclick="geoQuery('info')" aria-label="Obtener información">📊 Información</button>
+              <button class="btn btn-ghost btn-sm" onclick="geoQuery('area')" aria-label="Calcular área">📏 Área</button>
+              <button class="btn btn-ghost btn-sm" onclick="geoQuery('centroide')" aria-label="Calcular centroides">📍 Centroides</button>
+              <input type="number" id="geo-buffer-dist" placeholder="Dist. buffer (m)" style="width:120px;padding:6px 8px;font-size:.8rem" aria-label="Distancia de buffer en metros">
+              <button class="btn btn-ghost btn-sm" onclick="geoQuery('buffer')" aria-label="Crear buffer">🔲 Buffer</button>
+            </div>
+            <div id="geo-query-result" class="response-box" aria-live="polite"></div>
+          </div>
+
+          <!-- Cruce Espacial -->
+          <div class="card">
+            <h3>🌐 Cruce de Información Espacial</h3>
+            <p class="desc">Superpone dos capas para encontrar intersecciones, uniones o diferencias. Ideal para cruzar predios con zonas ambientales, frontera agrícola con resguardos, etc.</p>
+            <div class="flex flex-wrap mb-1">
+              <input type="file" id="geo-layer-a" accept=".geojson,.json,.kml,.kmz,.gpkg,.zip,.shp,.dbf,.prj,.shx" style="display:none" onchange="uploadOverlayLayerA(this)" aria-label="Subir capa A">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('geo-layer-a').click()" aria-label="Subir capa A (predios, municipios)">📂 Capa A</button>
+              <input type="file" id="geo-layer-b" accept=".geojson,.json,.kml,.kmz,.gpkg,.zip,.shp,.dbf,.prj,.shx" style="display:none" onchange="uploadOverlayLayerB(this)" aria-label="Subir capa B">
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('geo-layer-b').click()" aria-label="Subir capa B (ambiente, cuencas)">📂 Capa B</button>
+            </div>
+            <div id="overlay-status" style="font-size:.82rem;color:var(--text-dim);margin-bottom:8px">
+              Capa A: <span id="ol-label-a" style="color:var(--text-muted)">ninguna</span> | Capa B: <span id="ol-label-b" style="color:var(--text-muted)">ninguna</span>
+            </div>
+            <div class="flex mb-1">
+              <select id="overlay-op" aria-label="Operación espacial">
+                <option value="intersection">🔀 Intersección (A ∩ B)</option>
+                <option value="union">🔗 Unión (A ∪ B)</option>
+                <option value="difference">➖ Diferencia (A - B)</option>
+                <option value="symmetric_difference">🔄 Diferencia simétrica</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="runOverlay()" aria-label="Ejecutar cruce espacial">▶ Ejecutar</button>
+              <button class="btn btn-ghost btn-sm" onclick="clearOverlay()" aria-label="Limpiar overlay">🗑️ Limpiar</button>
+            </div>
+            <div id="overlay-result" class="response-box" aria-live="polite"></div>
+          </div>
+
+          <!-- Clasificación de Imágenes -->
+          <div class="card">
+            <h3>🛰️ Clasificación de Imágenes</h3>
+            <p class="desc">Clasifica imágenes satelitales o aéreas con IA (urbano, rural, bosque, agua, etc.)</p>
+            <div class="file-drop" id="geo-drop" onclick="document.getElementById('geo-file').click()" role="button" tabindex="0" aria-label="Zona de carga de imagen">
+              <div class="icon">🛰️</div>
+              <p>Arrastra una imagen o haz clic para seleccionar</p>
+              <p class="hint">JPG, PNG, TIFF</p>
+            </div>
+            <input type="file" id="geo-file" accept="image/*" style="display:none" onchange="classifyGeo(this)" aria-label="Subir imagen para clasificación">
+            <div id="geo-result" class="hidden mt-1">
+              <div class="model-grid" id="geo-result-grid"></div>
+              <div id="geo-segment" style="margin-top:10px"></div>
+            </div>
+          </div>
+
+          <!-- WFS/WMS Colombia -->
+          <div class="card">
+            <h3>🇨🇴 Servicios WFS/WMS Colombia</h3>
+            <p class="desc">Conecta directamente a servidores geoespaciales de entidades colombianas</p>
+            <div class="flex mb-1">
+              <select id="wfs-servidor" aria-label="Seleccionar servidor WFS/WMS">
+                <option value="">Selecciona un servidor...</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="connectWFS()" aria-label="Conectar a servidor WFS">📡 Conectar</button>
+            </div>
+            <div id="wfs-capas" style="font-size:.85rem;color:var(--text-dim);margin-bottom:8px" aria-live="polite"></div>
+            <div class="flex mb-1 hidden" id="wfs-query-row">
+              <input type="text" id="wfs-type-name" placeholder="typeName (ej: igac:mpio_1_500k)" style="flex:1;font-size:.82rem;padding:6px 10px" aria-label="Nombre de capa WFS">
+              <button class="btn btn-secondary btn-sm" onclick="queryWFS()" aria-label="Ejecutar consulta WFS">🔍 Query</button>
+            </div>
+            <div id="wfs-result" style="font-size:.82rem;color:var(--text-dim)" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <!-- AUTOMATION -->
+        <section id="tab-automation" class="tab" role="tabpanel" aria-labelledby="tab-automation">
+          <div class="card">
+            <h3>📐 Validación de Linderos</h3>
+            <p class="desc">Ingresa coordenadas XY para validar un polígono catastral</p>
+            <div class="coords-header">
+              <span>Coordenadas (X, Y)</span>
+              <button class="btn btn-ghost btn-sm" onclick="addCoord()" aria-label="Agregar nueva coordenada">+ Añadir</button>
+            </div>
+            <div id="coords-list">
+              <div class="coords-pair">
+                <input type="number" step="any" class="coord-x" placeholder="X" value="0" aria-label="Coordenada X">
+                <input type="number" step="any" class="coord-y" placeholder="Y" value="0" aria-label="Coordenada Y">
+              </div>
+              <div class="coords-pair">
+                <input type="number" step="any" class="coord-x" placeholder="X" value="10">
+                <input type="number" step="any" class="coord-y" placeholder="Y" value="0">
+              </div>
+              <div class="coords-pair">
+                <input type="number" step="any" class="coord-x" placeholder="X" value="10">
+                <input type="number" step="any" class="coord-y" placeholder="Y" value="10">
+              </div>
+              <div class="coords-pair">
+                <input type="number" step="any" class="coord-x" placeholder="X" value="0">
+                <input type="number" step="any" class="coord-y" placeholder="Y" value="10">
+              </div>
+            </div>
+            <div class="flex-row mt-1">
+              <button class="btn btn-primary" onclick="validateBoundary()" aria-label="Validar lindero">Validar lindero</button>
+            </div>
+            <div id="aut-response" class="response-box mt-1" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <!-- WEB SEARCH -->
+        <section id="tab-search" class="tab" role="tabpanel" aria-labelledby="tab-search">
+          <div class="card">
+            <h3>🔍 Búsqueda Web</h3>
+            <p class="desc">Busca información en internet sobre normativa catastral, trámites, jurisprudencia</p>
+            <div class="flex mb-1">
+              <input type="text" id="search-query" placeholder="Ej: procedimiento correccion area catastral colombia 2024" style="flex:1" aria-label="Términos de búsqueda web">
+              <button class="btn btn-primary" onclick="webSearch()" aria-label="Ejecutar búsqueda web">Buscar</button>
+            </div>
+            <div id="search-results" role="region" aria-label="Resultados de búsqueda"></div>
+            <div id="search-status" class="response-box hidden mt-1" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <!-- COLOMBIA -->
+        <section id="tab-colombia" class="tab" role="tabpanel" aria-labelledby="tab-colombia">
+          <div class="card">
+            <h3>🇨🇴 Fuentes Oficiales Colombia</h3>
+            <p class="desc">Busca en portales del gobierno colombiano: IGAC, SNRP, IDEAM, ANLA, UPRA, DNP, y mas</p>
+            <div class="flex mb-1">
+              <input type="text" id="colombia-query" placeholder="Ej: matricula inmobiliaria bogota" style="flex:1" onkeypress="if(event.key==='Enter') colombiaSearch()" aria-label="Términos de búsqueda Colombia">
+              <select id="colombia-cat" aria-label="Categoría de búsqueda">
+                <option value="catastral">🏛️ Catastral</option>
+                <option value="ambiental">🌿 Ambiental</option>
+                <option value="productiva">🌾 Productiva</option>
+                <option value="social">👥 Social</option>
+                <option value="economica">💰 Económica</option>
+                <option value="infraestructura">🏗️ Infraestructura</option>
+                <option value="gobierno">⚖️ Gobierno</option>
+                <option value="todas">📌 Todas</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;color:var(--text-dim);cursor:pointer" aria-label="Usar APIs directas">
+                <input type="checkbox" id="colombia-api-mode" checked aria-label="Checkbox para APIs directas"> API directa
+              </label>
+              <button class="btn btn-primary" onclick="colombiaSearch()" aria-label="Buscar en fuentes colombianas">Buscar</button>
+            </div>
+            <div id="colombia-results" role="region" aria-label="Resultados de búsqueda Colombia"></div>
+            <div style="margin-top:10px;font-size:.78rem;color:var(--text-muted)">
+              <strong>+70 fuentes oficiales</strong> — IGAC, SNRP, DANE, IDEAM, ANLA, UPRA, MinAmbiente, MinAgricultura y todas las entidades del estado colombiano
+            </div>
+          </div>
+        </section>
+
+        <!-- MODELS -->
+        <section id="tab-models" class="tab" role="tabpanel" aria-labelledby="tab-models">
+
+          <!-- Proveedores detectados -->
+          <div class="card">
+            <h3>🔌 Proveedores LLM detectados</h3>
+            <p class="desc">Nymaira detecta automáticamente Ollama, LM Studio, Jan AI, LocalAI, llama.cpp y más.</p>
+            <button class="btn btn-primary btn-sm" onclick="ModelsModule.scanProviders()" style="margin-bottom:12px">🔍 Escanear proveedores</button>
+            <div id="providers-grid" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+
+          <!-- Instalar modelos Ollama -->
+          <div class="card">
+            <h3>⬇️ Instalar modelos con Ollama</h3>
+            <p class="desc">Descarga modelos de lenguaje directamente desde Ollama. Requiere tener <strong>Ollama</strong> instalado y corriendo (<code style="color:var(--accent)">ollama serve</code>).</p>
+            <div id="ollama-models-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px"></div>
+            <div id="pull-status" style="margin-top:10px;font-size:.83rem;color:var(--text-dim)" aria-live="polite"></div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+              <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:6px">Instalar modelo personalizado:</p>
+              <div class="flex gap" style="gap:8px">
+                <input type="text" id="custom-model-input" placeholder="ej: phi3:mini, llama3.2:1b, codellama:7b" style="flex:1;font-size:.83rem">
+                <button class="btn btn-secondary btn-sm" onclick="ModelsModule.pullCustom()">⬇️ Instalar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modelos locales GGUF -->
+          <div class="card">
+            <h3>📦 Modelos GGUF locales</h3>
+            <p class="desc">Archivos <code style="color:var(--accent)">.gguf</code> en <code style="color:var(--accent)">models/llm/</code> — corren 100% offline con llama-cpp-python.</p>
+            <div id="gguf-grid" style="font-size:.85rem;color:var(--text-dim)">Cargando...</div>
+          </div>
+
+          <!-- Modelos de procesamiento -->
+          <div class="card">
+            <h3>🧩 Modelos de procesamiento</h3>
+            <p class="desc">OCR, voz (Whisper), clasificación de imágenes (ViT), embeddings (sentence-transformers)</p>
+            <div id="models-grid" class="model-grid" role="region"></div>
+            <div id="ai-model-grid" class="model-grid" role="region" style="margin-top:8px"></div>
+            <p style="font-size:.78rem;color:var(--text-muted);margin-top:10px">
+              Instala con: <code style="color:var(--accent)">pip install geoia[ai]</code>
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== CONFIG ==========
+    const API = '';
+    const SUGGESTIONS = ['Procedimiento para corrección de área', 'Calcular avalúo de terreno', 'Validar linderos de parcela', 'Buscar matrícula catastral'];
+
+    // ========== TAB SYSTEM MODULE ==========
+    const TabSystem = (() => {
+      const switchTab = (tab) => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sidebar-nav button[role="tab"]').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        const tabEl = document.getElementById('tab-' + tab);
+        const btnEl = document.querySelector(`.sidebar-nav button[data-tab="${tab}"]`);
+        if (tabEl && btnEl) {
+          tabEl.classList.add('active');
+          btnEl.classList.add('active');
+          btnEl.setAttribute('aria-selected', 'true');
+          const titles = { chatbot:'Chat', rag:'Documentos', geo:'Geo IA', automation:'Validación', search:'Web Search', colombia:'Colombia', models:'Modelos' };
+          document.getElementById('topbar-title').textContent = titles[tab] || tab;
+          if (tab === 'models') ModelsModule.init();
+          if (tab === 'geo') { setTimeout(initGeoMap, 100); setTimeout(cargarCapasWFS, 200); }
+        }
+      };
+
+      document.querySelectorAll('.sidebar-nav button[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        btn.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            switchTab(btn.dataset.tab);
+          }
+        });
+      });
+
+      return { switchTab };
+    })();
+
+    // ========== MARKDOWN RENDERER ==========
+    const renderMd = (() => {
+      if (typeof marked !== 'undefined') {
+        marked.use({ breaks: true, gfm: true });
+      }
+      const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      return (text, withCursor = false) => {
+        if (!text) return '';
+        let geoJson = null, geoPoint = null;
+
+        let src = text
+          .replace(/```geojson-(?:cruce|result)\n([\s\S]*?)```/g, (_, j) => {
+            try { geoJson = JSON.parse(j); } catch(_) {}
+            return '';
+          })
+          .replace(/```geojson-point\n([\s\S]*?)```/g, (_, j) => {
+            try { geoPoint = JSON.parse(j); } catch(_) {}
+            return '';
+          })
+          .trim();
+
+        let html = (typeof marked !== 'undefined') ? marked.parse(src) : esc(src).replace(/\n/g,'<br>');
+
+        if (geoJson) {
+          window._lastGeoJson = geoJson;
+          html += `<div class="geo-btn-row"><button class="tag geo-action" onclick="GeoModule.addToMap(window._lastGeoJson,'Resultado');TabSystem.switchTab('geo')">🗺️ Ver resultado en mapa</button></div>`;
+        }
+        if (geoPoint) {
+          window._lastGeoPoint = geoPoint;
+          const c = geoPoint.features?.[0]?.geometry?.coordinates;
+          if (c) html += `<div class="geo-btn-row"><button class="tag geo-action" onclick="GeoModule.addToMap(window._lastGeoPoint,'Coordenada');TabSystem.switchTab('geo')">📍 Ver en mapa — ${c[1].toFixed(6)}, ${c[0].toFixed(6)}</button></div>`;
+        }
+        if (withCursor) html += '<span class="cursor-blink">▌</span>';
+        return html;
+      };
+    })();
+
+    // ========== CHAT MODULE ==========
+    const ChatModule = (() => {
+      let sessionId = 'web_' + Date.now();
+      let mediaRecorder = null, audioChunks = [], isRecording = false;
+      let abortCtrl = null;   // AbortController activo
+
+      // ── Helpers UI ──────────────────────────────────────────────
+      const $ = (id) => document.getElementById(id);
+      const msgs = () => $('chat-messages');
+      const sendBtn = () => $('send-btn');
+
+      const setBusy = (busy) => {
+        const btn = sendBtn();
+        if (!btn) return;
+        btn.disabled = busy;
+        btn.style.opacity = busy ? '0.5' : '1';
+      };
+
+      const scrollBottom = (el) => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      };
+
+      const addMsg = (text, role, cls) => {
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + role + (cls ? ' ' + cls : '');
+        if (cls === 'loading') {
+          div.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+        } else if (role === 'bot' && cls !== 'error') {
+          div.innerHTML = renderMd(text);
+        } else if (role === 'system') {
+          div.innerHTML = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+        } else {
+          div.textContent = text;
+        }
+        msgs().appendChild(div);
+        scrollBottom(div);
+        return div;
+      };
+
+      // ── Chips de sugerencia ──────────────────────────────────────
+      const CHIPS = [
+        '¿Qué trámites puedo hacer?', 'Consultar normatividad IGAC',
+        'Buscar información del predio', 'Calcular área del polígono',
+        'Cruzar con capa ambiental', '¿Cómo actualizo el catastro?',
+        'Ver servidores WFS disponibles', 'Explicar avalúo catastral',
+      ];
+      const addChips = (afterEl) => {
+        const row = document.createElement('div');
+        row.className = 'chips-row';
+        const picks = [...CHIPS].sort(() => Math.random() - 0.5).slice(0, 3);
+        picks.forEach(t => {
+          const b = document.createElement('button');
+          b.className = 'chip-btn';
+          b.textContent = t;
+          b.onclick = () => { $('chat-input').value = t; sendChat(); row.remove(); };
+          row.appendChild(b);
+        });
+        afterEl.insertAdjacentElement('afterend', row);
+      };
+
+      // ── Parser SSE — renderizado inmediato, sin buffer de RAF ──
+      const parseSSE = async (response, onToken, onDone) => {
+        const reader = response.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '', fullText = '', done = false;
+        // Acumular tokens en micro-batches de 16ms para reducir reflows sin RAF
+        let batchBuf = '', batchTimer = null;
+        const flushBatch = () => {
+          batchTimer = null;
+          if (batchBuf) { onToken(fullText, false); batchBuf = ''; }
+        };
+
+        try {
+          while (!done) {
+            const { value, done: streamDone } = await reader.read();
+            if (streamDone) break;
+            buf += dec.decode(value, { stream: true });
+
+            let nl;
+            while ((nl = buf.indexOf('\n')) !== -1) {
+              const line = buf.slice(0, nl).trimEnd();
+              buf = buf.slice(nl + 1);
+              if (!line.startsWith('data:')) continue;
+              const payload = line.slice(5).trim();
+              if (payload === '[DONE]') { done = true; break; }
+              try {
+                const d = JSON.parse(payload);
+                if (d.content) {
+                  fullText += d.content;
+                  batchBuf += d.content;
+                  // Renderizar inmediatamente si el token contiene salto de línea
+                  // (nuevo párrafo), o si hay >30 chars acumulados
+                  if (d.content.includes('\n') || batchBuf.length > 30) {
+                    if (batchTimer) clearTimeout(batchTimer);
+                    flushBatch();
+                  } else if (!batchTimer) {
+                    batchTimer = setTimeout(flushBatch, 12);
+                  }
+                }
+                if (d.error) { fullText += `\n\n⚠️ ${d.error}`; onToken(fullText, false); }
+              } catch(_) {}
+            }
+          }
+        } finally {
+          if (batchTimer) { clearTimeout(batchTimer); flushBatch(); }
+          try { reader.cancel(); } catch(_) {}
+        }
+        onDone(fullText);
+      };
+
+      // ── Enviar mensaje ───────────────────────────────────────────
+      const sendChat = async () => {
+        if (sendBtn()?.disabled) return;
+
+        const input = $('chat-input');
+        const fileLabel = $('chat-file-label');
+        const geoInput = $('chat-geojson');
+        let msg = input.value.trim();
+        const ctx = fileLabel?.dataset.content || '';
+        if (!msg && !ctx) return;
+
+        $('welcome-banner')?.classList.add('hidden');
+        if (ctx) msg = msg ? msg + '\n\n---\n' + ctx : ctx;
+
+        input.value = '';
+        if (fileLabel) { fileLabel.classList.add('hidden'); fileLabel.dataset.content = ''; }
+        if (geoInput) geoInput.value = '';
+
+        addMsg(msg, 'user');
+        const botDiv = addMsg('', 'bot', 'loading');
+        setBusy(true);
+        abortCtrl = new AbortController();
+
+        const body = { message: msg, session_id: sessionId };
+        const raw = geoInput?.value || '';
+        if (raw) try { body.geojson = JSON.parse(raw); } catch(_) {}
+
+        const finalize = (text, isError) => {
+          botDiv.className = 'chat-msg bot' + (isError ? ' error' : '');
+          botDiv.innerHTML = isError
+            ? `<span>⚠️ ${text}</span><button class="chip-btn" style="margin-left:8px" onclick="ChatModule.retry()">↩ Reintentar</button>`
+            : renderMd(text);
+          scrollBottom(botDiv);
+          if (!isError) addChips(botDiv);
+          setBusy(false);
+          abortCtrl = null;
+          input.focus();
+        };
+
+        // ── 1. Intentar streaming ──
+        try {
+          const r = await fetch(API + '/api/v1/chatbot/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: abortCtrl.signal,
+          });
+
+          if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+
+          botDiv.className = 'chat-msg bot';
+          botDiv.innerHTML = '';
+
+          await parseSSE(
+            r,
+            (text) => {
+              botDiv.innerHTML = renderMd(text, true);
+              scrollBottom(botDiv);
+            },
+            (text) => finalize(text || '(sin respuesta)', false)
+          );
+
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            finalize('Consulta cancelada.', false);
+            return;
+          }
+          // ── 2. Fallback al endpoint normal ──
+          try {
+            const r2 = await fetch(API + '/api/v1/chatbot/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+            const d = await r2.json();
+            finalize(d.response || d.reply || '(sin respuesta)', false);
+          } catch (err2) {
+            finalize(`No se pudo conectar al servidor. ¿Está corriendo Nymaira?\n\nDetalle: ${err2.message}`, true);
+          }
+        }
+      };
+
+      // ── Cancelar streaming activo ────────────────────────────────
+      const cancelStream = () => { abortCtrl?.abort(); };
+
+      // ── Reintento del último mensaje ─────────────────────────────
+      let _lastMsg = '';
+      const retry = () => {
+        if (_lastMsg) { $('chat-input').value = _lastMsg; sendChat(); }
+      };
+
+      // ── Voz ──────────────────────────────────────────────────────
+      const toggleMic = async () => {
+        const btn = $('mic-btn');
+        if (isRecording) {
+          mediaRecorder?.stop();
+          isRecording = false;
+          if (btn) { btn.textContent = '🎤'; btn.style.color = ''; }
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+          audioChunks = [];
+          mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+          mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const form = new FormData();
+            form.append('file', blob, 'voz.webm');
+            const info = addMsg('🎤 Transcribiendo...', 'system');
+            try {
+              const r = await fetch(API + '/api/v1/chatbot/stt', { method: 'POST', body: form });
+              const data = await r.json();
+              info.remove();
+              if (data.texto) { $('chat-input').value = data.texto; $('chat-input').focus(); setTimeout(sendChat, 200); }
+            } catch(e) { info.remove(); addMsg('Error al transcribir: ' + e.message, 'bot', 'error'); }
+          };
+          mediaRecorder.start();
+          isRecording = true;
+          if (btn) { btn.textContent = '⏹️'; btn.style.color = 'var(--red)'; }
+          addMsg('🎤 Grabando... presiona ⏹️ para detener', 'system');
+        } catch(e) {
+          addMsg('Micrófono no disponible: ' + e.message, 'bot', 'error');
+        }
+      };
+
+      // ── Subir archivo ────────────────────────────────────────────
+      const uploadFile = async (input) => {
+        const file = input.files[0];
+        if (!file) return;
+        const label = $('chat-file-label');
+        const geoInput = $('chat-geojson');
+        if (label) { label.textContent = '⏳ ' + file.name; label.classList.remove('hidden'); label.dataset.content = ''; }
+        if (geoInput) geoInput.value = '';
+        const form = new FormData();
+        form.append('file', file);
+        try {
+          const r = await fetch(API + '/api/v1/chatbot/upload', { method: 'POST', body: form });
+          const data = await r.json();
+          if (label) { label.textContent = '📎 ' + data.filename + ' (' + data.size_kb + 'KB)'; label.dataset.content = 'Archivo: ' + data.filename + '\n\n' + data.content; }
+          if (data.es_espacial && data.geojson && geoInput) {
+            geoInput.value = JSON.stringify(data.geojson);
+            if (label) label.textContent += ' 🌐';
+            addMsg(`🌐 **${data.filename}** cargado — ${data.count} geometrías`, 'system');
+            GeoModule.addToMap(data.geojson, data.filename);
+            TabSystem.switchTab('geo');
+          } else {
+            addMsg(`📎 **${data.filename}** listo`, 'system');
+          }
+          $('chat-input')?.focus();
+        } catch(e) {
+          if (label) { label.textContent = '✗ Error'; label.style.color = 'var(--red)'; }
+          addMsg('Error al cargar: ' + e.message, 'bot', 'error');
+        }
+        input.value = '';
+      };
+
+      const clearFile = () => {
+        const label = $('chat-file-label');
+        if (label) { label.classList.add('hidden'); label.dataset.content = ''; label.style.color = ''; }
+        const fi = $('chat-file-input');
+        if (fi) fi.value = '';
+      };
+
+      // ── Reset sesión ─────────────────────────────────────────────
+      const reset = () => {
+        cancelStream();
+        setBusy(false);
+        sessionId = 'web_' + Date.now();
+        clearFile();
+        const wb = $('welcome-banner');
+        if (wb) {
+          wb.classList.remove('hidden');
+          wb.innerHTML = `<div class="chat-msg bot welcome-msg">
+            <p>¡Hola! Soy <strong>Nymaira</strong>, tu asistente para temas de catastro y terrenos. Puedo ayudarte con:</p>
+            <ul style="margin:10px 0 10px 0;padding-left:4px;list-style:none;line-height:2">
+              <li>🏠 Consultas de matrícula y avalúos</li>
+              <li>📐 Validación de linderos</li>
+              <li>📄 Trámites catastrales</li>
+              <li>🌍 Información del gobierno colombiano</li>
+            </ul>
+            <p style="color:var(--text-dim);font-size:.88rem">¿En qué te puedo colaborar?</p>
+            <div class="chips-row" style="margin-top:10px">
+              ${SUGGESTIONS.map(s=>`<button class="chip-btn" onclick="document.getElementById('chat-input').value=this.textContent;document.getElementById('chat-input').focus()">${s}</button>`).join('')}
+            </div>
+          </div>`;
+        }
+        msgs().innerHTML = '';
+      };
+
+      reset();
+
+      return { sendChat, toggleMic, uploadFile, clearFile, reset, addMsg, cancelStream, retry };
+    })();
+
+    // Alias globales para compatibilidad
+    const sendChat = () => ChatModule.sendChat();
+    const toggleMic = () => ChatModule.toggleMic();
+    const uploadChatFile = (input) => ChatModule.uploadFile(input);
+    const clearChatFile = () => ChatModule.clearFile();
+    const resetChat = () => ChatModule.reset();
+
+    // ========== GEO MODULE ==========
+    const GeoModule = (() => {
+      let geoMap = null;
+      let geoLayer = null;
+      let geoData = null;
+      let overlayLayerA = null;
+      let overlayLayerB = null;
+
+      const initMap = () => {
+        const el = document.getElementById('geo-map');
+        if (!el) return;
+        if (geoMap) { geoMap.invalidateSize(); return; }
+        geoMap = L.map('geo-map').setView([4.5709, -74.2973], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19, attribution: '© OpenStreetMap'
+        }).addTo(geoMap);
+        setTimeout(() => geoMap.invalidateSize(), 300);
+      };
+
+      const addToMap = (geojsonData, label) => {
+        if (!geoMap) initMap();
+        if (geoLayer) geoMap.removeLayer(geoLayer);
+        try {
+          geoLayer = L.geoJSON(geojsonData, {
+            style: { color: '#38bdf8', weight: 2, fillOpacity: 0.15 },
+            onEachFeature: (f, l) => {
+              if (f.properties) {
+                const props = Object.entries(f.properties).slice(0, 6)
+                  .map(([k, v]) => `${k}: ${v}`).join('<br>');
+                if (props) l.bindPopup(props);
+              }
+            }
+          }).addTo(geoMap);
+          geoMap.fitBounds(geoLayer.getBounds(), { padding: [30, 30], maxZoom: 16 });
+        } catch(e) {
+          document.getElementById('geo-upload-status').textContent = 'Error dibujando: ' + e.message;
+        }
+      };
+
+      const uploadVector = async (input) => {
+        const file = input.files[0];
+        if (!file) return;
+        const status = document.getElementById('geo-upload-status');
+        status.textContent = '⏳ Procesando...';
+        const form = new FormData();
+        form.append('file', file);
+        try {
+          const r = await fetch(API + '/api/v1/geo/upload-vector', { method: 'POST', body: form });
+          const data = await r.json();
+          if (data.error) { status.textContent = '❌ ' + data.error; return; }
+          status.textContent = '✅ ' + data.filename + ' | ' + data.count + ' features';
+          geoData = data.geojson;
+          addToMap(data.geojson, data.filename);
+        } catch(e) {
+          status.textContent = '❌ Error: ' + e.message;
+        }
+        input.value = '';
+      };
+
+      const clearMap = () => {
+        if (geoLayer) { geoMap.removeLayer(geoLayer); geoLayer = null; }
+        geoData = null;
+        document.getElementById('geo-upload-status').textContent = '';
+        if (geoMap) geoMap.setView([4.5709, -74.2973], 6);
+      };
+
+      return { initMap, addToMap, uploadVector, clearMap };
+    })();
+
+    const initGeoMap = () => GeoModule.initMap();
+    const addGeoToMap = (data, label) => GeoModule.addToMap(data, label);
+    const uploadGeoVector = (input) => GeoModule.uploadVector(input);
+    const clearGeoMap = () => GeoModule.clearMap();
+
+    // ========== UTILITY FUNCTIONS ==========
+    const escapeHtml = (t) => {
+      const d = document.createElement('div');
+      d.textContent = t;
+      return d.innerHTML;
+    };
+
+    // ========== MODELS MODULE ==========
+    const ModelsModule = (() => {
+
+      const PROVIDER_ICONS = {
+        ollama: '🦙', openai: '🤖', openai_compat: '⚡', gguf: '📦', custom: '🔧',
+      };
+
+      const scanProviders = async () => {
+        const grid = document.getElementById('providers-grid');
+        if (!grid) return;
+        grid.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">🔍 Escaneando puertos locales...</div>';
+        try {
+          const r = await fetch(API + '/api/v1/models/llm/discover');
+          const data = await r.json();
+          if (!data.endpoints?.length) {
+            grid.innerHTML = '<div style="color:var(--text-dim);font-size:.85rem">⚠️ Ningún proveedor detectado. Instala <strong>Ollama</strong> (ollama.com) y ejecuta <code>ollama serve</code>.</div>';
+            return;
+          }
+          grid.innerHTML = '';
+          data.endpoints.forEach(ep => {
+            const icon = PROVIDER_ICONS[ep.provider] || '🔌';
+            const models = ep.models?.length ? ep.models.slice(0,5).join(', ') : 'sin modelos';
+            const div = document.createElement('div');
+            div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px';
+            div.innerHTML = `
+              <span style="font-size:1.3rem">${icon}</span>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:.88rem;color:var(--text)">${ep.name}</div>
+                <div style="font-size:.78rem;color:var(--text-dim);margin-top:2px">${ep.base_url} — <span style="color:var(--accent)">${models}</span></div>
+              </div>
+              <span style="font-size:.72rem;padding:2px 8px;border-radius:10px;background:rgba(34,197,94,.12);color:#22c55e">● online</span>`;
+            grid.appendChild(div);
+          });
+        } catch(e) {
+          grid.innerHTML = `<div style="color:var(--red);font-size:.85rem">❌ Error: ${e.message}</div>`;
+        }
+      };
+
+      const loadOllamaModels = async () => {
+        const grid = document.getElementById('ollama-models-grid');
+        if (!grid) return;
+        try {
+          const r = await fetch(API + '/api/v1/models/llm/ollama');
+          const data = await r.json();
+          grid.innerHTML = '';
+          (data.recomendados || []).forEach(m => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px';
+            const installed = m.instalado;
+            card.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <span style="font-weight:600;font-size:.88rem;color:var(--text)">${m.label}</span>
+                <span style="font-size:.7rem;padding:1px 7px;border-radius:8px;background:var(--accent-bg);color:var(--accent)">${m.tag}</span>
+              </div>
+              <div style="font-size:.78rem;color:var(--text-dim)">${m.desc}</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+                <span style="font-size:.75rem;color:var(--text-muted)">💾 ${m.size}</span>
+                ${installed
+                  ? '<span style="font-size:.75rem;color:#22c55e">✅ Instalado</span>'
+                  : `<button class="btn btn-secondary btn-sm" style="font-size:.75rem;padding:3px 10px" onclick="ModelsModule.pullModel('${m.id}')">⬇️ Instalar</button>`
+                }
+              </div>`;
+            grid.appendChild(card);
+          });
+        } catch(e) {
+          if (grid) grid.innerHTML = '<div style="font-size:.83rem;color:var(--text-dim)">Ollama no detectado. <a href="https://ollama.com" target="_blank" style="color:var(--accent)">Instalar Ollama →</a></div>';
+        }
+      };
+
+      const loadGgufModels = async () => {
+        const div = document.getElementById('gguf-grid');
+        if (!div) return;
+        try {
+          const r = await fetch(API + '/api/v1/models/llm/discover');
+          const data = await r.json();
+          const gguf = data.endpoints?.find(e => e.provider === 'gguf');
+          if (gguf?.models?.length) {
+            div.innerHTML = gguf.models.map(m =>
+              `<div style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:.83rem;color:var(--text);margin-bottom:6px">📦 ${m}</div>`
+            ).join('');
+          } else {
+            div.innerHTML = '<span style="color:var(--text-dim);font-size:.83rem">No hay archivos .gguf en <code>models/llm/</code>. Descarga uno desde <a href="https://huggingface.co/models?library=gguf" target="_blank" style="color:var(--accent)">HuggingFace →</a></span>';
+          }
+        } catch(e) {
+          div.innerHTML = '<span style="color:var(--text-dim);font-size:.83rem">Error al escanear.</span>';
+        }
+      };
+
+      const pullModel = async (modelId) => {
+        const status = document.getElementById('pull-status');
+        if (status) status.innerHTML = `⏳ Descargando <strong>${modelId}</strong>... esto puede tardar varios minutos según tu internet.`;
+        try {
+          const r = await fetch(API + '/api/v1/models/llm/ollama/pull', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({model: modelId}),
+          });
+          const data = await r.json();
+          if (r.ok) {
+            if (status) status.innerHTML = `✅ ${data.message} — Recarga la página cuando termine.`;
+          } else {
+            if (status) status.innerHTML = `❌ ${data.detail || 'Error'}`;
+          }
+        } catch(e) {
+          if (status) status.innerHTML = `❌ Error: ${e.message}`;
+        }
+      };
+
+      const pullCustom = () => {
+        const input = document.getElementById('custom-model-input');
+        const val = input?.value?.trim();
+        if (!val) return;
+        pullModel(val);
+        if (input) input.value = '';
+      };
+
+      // Cargar al entrar a la pestaña
+      const init = () => {
+        scanProviders();
+        loadOllamaModels();
+        loadGgufModels();
+      };
+
+      return { init, scanProviders, loadOllamaModels, pullModel, pullCustom };
+    })();
+
+    // ========== PLACEHOLDER FUNCTIONS (STUBS) ==========
+    async function ingestDoc(input) {}
+    async function queryRag() {}
+    async function uploadGeoRaster(input) {}
+    async function classifyGeo(input, file) {}
+    async function geoQuery(op) {}
+    async function uploadOverlayLayerA(input) {}
+    async function uploadOverlayLayerB(input) {}
+    async function runOverlay() {}
+    async function clearOverlay() {}
+
+    // ========== WFS AUTO-CONNECT ==========
+    const WFSState = { servidor: null, url: null, capas: [] };
+
+    async function cargarServidoresWFS() {
+      const sel = document.getElementById('wfs-servidor');
+      if (!sel) return;
+      try {
+        const r = await fetch(API + '/api/v1/geo/wfs/servidores');
+        const data = await r.json();
+        sel.innerHTML = '<option value="">Selecciona un servidor...</option>';
+        (data.servidores || []).forEach((s, i) => {
+          const opt = document.createElement('option');
+          opt.value = s.url_wfs || '';
+          opt.textContent = s.nombre + ' (' + (s.categoria || '') + ')';
+          opt.dataset.nombre = s.nombre;
+          opt.dataset.categoria = s.categoria || '';
+          sel.appendChild(opt);
+        });
+        // Auto-conectar al primer servidor
+        if (sel.options.length > 1) {
+          sel.selectedIndex = 1;
+          await connectWFS();
+        }
+      } catch(e) {
+        console.error('Error cargando servidores WFS:', e);
+      }
+    }
+
+    async function connectWFS() {
+      const sel = document.getElementById('wfs-servidor');
+      const capasDiv = document.getElementById('wfs-capas');
+      const queryRow = document.getElementById('wfs-query-row');
+      const resultDiv = document.getElementById('wfs-result');
+      if (!sel || !sel.value) return;
+
+      const url = sel.value;
+      const nombre = sel.options[sel.selectedIndex]?.dataset?.nombre || url;
+      capasDiv.innerHTML = '⏳ Conectando a ' + escapeHtml(nombre) + '...';
+      resultDiv.innerHTML = '';
+      queryRow.classList.add('hidden');
+
+      try {
+        const r = await fetch(API + '/api/v1/geo/wfs/capabilities?url=' + encodeURIComponent(url), {method: 'POST'});
+        const data = await r.json();
+        if (data.error) {
+          capasDiv.innerHTML = '❌ Error: ' + escapeHtml(data.error);
+          return;
+        }
+        WFSState.servidor = nombre;
+        WFSState.url = url;
+        WFSState.capas = data.capas || [];
+
+        let html = '✅ <strong>' + escapeHtml(data.titulo || nombre) + '</strong><br>';
+        html += '📡 ' + WFSState.capas.length + ' capas disponibles<br>';
+        html += '<div style="max-height:150px;overflow-y:auto;margin-top:6px;font-size:.8rem">';
+        WFSState.capas.forEach(c => {
+          html += '<div style="padding:3px 0;border-bottom:1px solid var(--border);cursor:pointer" ';
+          html += 'onclick="document.getElementById(\'wfs-type-name\').value=\'' + escapeHtml(c.name) + '\';document.getElementById(\'wfs-query-row\').classList.remove(\'hidden\')" ';
+          html += 'title="Click para seleccionar esta capa">';
+          html += '• ' + escapeHtml(c.name);
+          if (c.title) html += ' <span style="color:var(--text-dim)">(' + escapeHtml(c.title) + ')</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+        capasDiv.innerHTML = html;
+      } catch(e) {
+        capasDiv.innerHTML = '❌ Error de conexión: ' + escapeHtml(e.message);
+      }
+    }
+
+    async function queryWFS() {
+      const typeName = document.getElementById('wfs-type-name')?.value;
+      const resultDiv = document.getElementById('wfs-result');
+      if (!typeName || !WFSState.url) return;
+
+      resultDiv.innerHTML = '⏳ Consultando ' + escapeHtml(typeName) + '...';
+      try {
+        const r = await fetch(API + '/api/v1/geo/wfs/query?url=' + encodeURIComponent(WFSState.url) + '&type_name=' + encodeURIComponent(typeName) + '&max_features=50', {method: 'POST'});
+        const data = await r.json();
+        if (data.error) {
+          resultDiv.innerHTML = '❌ Error: ' + escapeHtml(data.error);
+          return;
+        }
+        resultDiv.innerHTML = '✅ ' + data.count + ' features obtenidas de ' + escapeHtml(typeName);
+        if (data.features && data.features.length > 0) {
+          addGeoToMap({ type: 'FeatureCollection', features: data.features }, typeName);
+          resultDiv.innerHTML += ' — 🗺️ Mostradas en el mapa';
+        }
+      } catch(e) {
+        resultDiv.innerHTML = '❌ Error: ' + escapeHtml(e.message);
+      }
+    }
+
+    async function cargarCapasWFS() {
+      await connectWFS();
+    }
+
+    // Auto-conectar WFS al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(cargarServidoresWFS, 500);
+    });
+  </script>
+</body>
+</html>

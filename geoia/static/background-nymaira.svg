@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a3a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0a0f1a;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect width="1920" height="1080" fill="url(#bgGrad)"/>
+  
+  <g opacity="0.12">
+    <!-- Órbitas -->
+    <circle cx="960" cy="540" r="320" fill="none" stroke="#4db8a8" stroke-width="2"/>
+    <circle cx="960" cy="540" r="300" fill="none" stroke="#4db8a8" stroke-width="1.5" opacity="0.6"/>
+    <ellipse cx="960" cy="540" rx="340" ry="180" fill="none" stroke="#4db8a8" stroke-width="1.5" opacity="0.5"/>
+    
+    <!-- Mapa base Colombia -->
+    <path d="M 960 280 Q 1080 380 1080 500 Q 1070 620 960 720 Q 850 620 840 500 Q 840 380 960 280 Z" fill="#1a5f4a" opacity="0.4"/>
+    
+    <!-- Detalles topográficos -->
+    <path d="M 920 380 Q 980 420 980 480 Q 960 530 920 530 Q 880 510 880 450 Z" fill="#1a5f4a" opacity="0.5"/>
+    <path d="M 1000 420 Q 1040 450 1040 500 Q 1020 540 990 530 Q 1010 480 1000 420 Z" fill="#2d7a5f" opacity="0.4"/>
+    
+    <!-- Puntos de conexión (satélites/servidores) -->
+    <circle cx="1220" cy="460" r="6" fill="#f4d35e" opacity="0.8"/>
+    <circle cx="700" cy="460" r="6" fill="#4db8a8" opacity="0.8"/>
+    <circle cx="960" cy="250" r="5" fill="#f4d35e" opacity="0.7"/>
+    <circle cx="960" cy="830" r="5" fill="#4db8a8" opacity="0.7"/>
+    <circle cx="960" cy="540" r="4" fill="#4db8a8" opacity="0.6"/>
+    
+    <!-- Líneas de conexión -->
+    <line x1="1220" y1="460" x2="1040" y2="500" stroke="#4db8a8" stroke-width="1" opacity="0.5"/>
+    <line x1="700" y1="460" x2="880" y2="480" stroke="#4db8a8" stroke-width="1" opacity="0.5"/>
+    <line x1="960" y1="250" x2="960" y2="380" stroke="#f4d35e" stroke-width="1" opacity="0.4"/>
+    <line x1="960" y1="700" x2="960" y2="830" stroke="#4db8a8" stroke-width="1" opacity="0.4"/>
+    
+    <!-- Texto de marca -->
+    <text x="960" y="920" font-family="Arial, sans-serif" font-size="56" font-weight="bold" text-anchor="middle" fill="#64b896" opacity="0.5" letter-spacing="2">
+      LA MENTE DEL TERRITORIO
+    </text>
+    <text x="960" y="975" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#f4d35e" opacity="0.35" letter-spacing="1">
+      INTELIGENCIA GEOESPACIAL | SIG &amp; IA
+    </text>
+  </g>
+</svg>

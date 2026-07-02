@@ -1,0 +1,57 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <style>
+      .kadi-globe { fill: #1a5f4a; }
+      .kadi-network { stroke: #4db8a8; stroke-width: 2; fill: none; }
+      .kadi-border { fill: #f4d35e; }
+      .kadi-satellite { fill: #4db8a8; }
+      .kadi-glow { filter: drop-shadow(0 0 8px rgba(77, 184, 168, 0.5)); }
+    </style>
+  </defs>
+
+  <!-- Fondo transparente -->
+  <rect width="200" height="200" fill="none"/>
+
+  <!-- Red geoespacial (órbitas) -->
+  <g class="kadi-network">
+    <circle cx="100" cy="100" r="70"/>
+    <ellipse cx="100" cy="100" rx="75" ry="40" transform="rotate(25 100 100)"/>
+    <ellipse cx="100" cy="100" rx="75" ry="40" transform="rotate(-25 100 100)"/>
+  </g>
+
+  <!-- Mapa base de Colombia (simplificado) -->
+  <g class="kadi-glow">
+    <path class="kadi-globe" d="M 100 50 Q 115 65 115 85 Q 110 110 100 125 Q 90 110 85 85 Q 85 65 100 50 Z" />
+    <path class="kadi-globe" d="M 95 70 Q 105 75 105 85 Q 100 95 95 95 Q 90 90 90 80 Z" />
+    <path class="kadi-globe" d="M 105 90 Q 110 100 105 110 Q 98 108 98 100 Z" />
+  </g>
+
+  <!-- Bordes administrativos de Colombia (en amarillo/dorado) -->
+  <g class="kadi-border" opacity="0.8">
+    <path d="M 100 55 L 105 65" stroke="#f4d35e" stroke-width="1.5" fill="none"/>
+    <path d="M 110 75 L 115 85" stroke="#f4d35e" stroke-width="1.5" fill="none"/>
+    <path d="M 95 85 L 105 100" stroke="#f4d35e" stroke-width="1.5" fill="none"/>
+  </g>
+
+  <!-- Puntos de conexión (satélites/servidores) -->
+  <g class="kadi-satellite">
+    <!-- Satélites en la órbita -->
+    <circle cx="160" cy="85" r="4"/>
+    <circle cx="125" cy="50" r="3.5"/>
+    <circle cx="75" cy="50" r="3.5"/>
+    <circle cx="40" cy="85" r="4"/>
+    <circle cx="100" cy="160" r="4"/>
+    <!-- Servidores en tierra -->
+    <circle cx="100" cy="100" r="3" opacity="0.8"/>
+    <circle cx="105" cy="85" r="2.5" opacity="0.7"/>
+  </g>
+
+  <!-- Conexiones entre puntos -->
+  <g class="kadi-network" opacity="0.6">
+    <line x1="160" y1="85" x2="125" y2="100"/>
+    <line x1="125" y1="50" x2="100" y2="70"/>
+    <line x1="75" y1="50" x2="85" y2="75"/>
+    <line x1="40" y1="85" x2="80" y2="90"/>
+    <line x1="100" y1="160" x2="105" y2="120"/>
+  </g>
+</svg>
