@@ -4,8 +4,8 @@
     {
       "name": "nymaira-server",
       "runtimeExecutable": "venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "geoia.api.main:app", "--host", "127.0.0.1", "--port", "8010"],
-      "port": 8010
+      "runtimeArgs": ["-m", "uvicorn", "geoia.api.main:app", "--host", "127.0.0.1", "--port", "8602"],
+      "port": 8602
     }
   ]
 }
