@@ -646,7 +646,7 @@ class ChatbotEngine:
                     json={"model": await _get_fastest_model(), "messages": messages, "stream": False,
                           "keep_alive": -1,
                           "options": {"num_predict": 640, "temperature": 0.2, "num_ctx": 4096,
-                                      "num_thread": 0, "num_gpu": 99, "top_k": 40, "top_p": 0.85,
+                                      "num_thread": 4, "num_gpu": 99, "top_k": 40, "top_p": 0.85,
                                       "repeat_penalty": 1.2, "repeat_last_n": 320,
                                       "frequency_penalty": 0.6, "presence_penalty": 0.3}},
                 )
@@ -687,11 +687,14 @@ class ChatbotEngine:
         """Búsqueda ACOTADA (web + fuentes oficiales + RAG) para fundamentar la
         respuesta del streaming. Devuelve (contexto, bloque_de_fuentes, meta)
         donde meta indica cuántas fuentes reales (rag/web/oficiales) se usaron."""
-        tasks = [asyncio.wait_for(_buscar_en_web(message, 4), timeout=2.5)]
+        # Timeouts recortados para minimizar el tiempo-hasta-primer-token: las
+        # búsquedas corren en paralelo (gather), así que el bloqueo real es el
+        # MÁXIMO de ellas. El RAG es local y responde <1s; la web es lo más lento.
+        tasks = [asyncio.wait_for(_buscar_en_web(message, 4), timeout=1.8)]
 
         if categoria:
             from geoia.websearch.colombia import search_colombia
-            tasks.append(asyncio.wait_for(search_colombia(message, categoria, num_por_fuente=1), timeout=2.5))
+            tasks.append(asyncio.wait_for(search_colombia(message, categoria, num_por_fuente=1), timeout=1.8))
         else:
             tasks.append(asyncio.sleep(0, result=[]))
 
@@ -701,7 +704,8 @@ class ChatbotEngine:
             try:
                 from geoia.api.routes.rag import get_engine as get_rag_engine
                 rag = await get_rag_engine()
-                tasks.append(asyncio.wait_for(asyncio.to_thread(rag.query, message, 6), timeout=6))
+                # generar=False: solo recuperación (rápida, local); sin llamada LLM interna.
+                tasks.append(asyncio.wait_for(asyncio.to_thread(rag.query, message, 6, False), timeout=2.5))
             except Exception:
                 tasks.append(asyncio.sleep(0, result=None))
         else:
@@ -993,7 +997,7 @@ class ChatbotEngine:
                             "temperature": 0.2,
                             "num_predict": 640,
                             "num_ctx": 4096,
-                            "num_thread": 0,
+                            "num_thread": 4,   # = núcleos FÍSICOS del i7-1165G7; medido +5% vs auto, y 8 (hyperthreads) es peor
                             "num_gpu": 99,
                             "top_k": 40,
                             "top_p": 0.9,

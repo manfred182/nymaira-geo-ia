@@ -327,7 +327,11 @@ class RAGEngine:
             logger.error(f"RAG answer generation error: {e}")
             return ""
 
-    def query(self, query_text: str, top_k: int = 8) -> dict:
+    def query(self, query_text: str, top_k: int = 8, generar: bool = True) -> dict:
+        """Recupera fragmentos relevantes. Si `generar=True` además redacta una
+        respuesta con el LLM (endpoint /rag/query). El chatbot usa `generar=False`
+        porque solo necesita los fragmentos como contexto — así evita una llamada
+        LLM extra que competiría con el streaming y dispararía el tiempo de espera."""
         if self.index is None or self.index.ntotal == 0:
             return {"answer": "", "sources": [], "chunks": []}
 
@@ -384,7 +388,7 @@ class RAGEngine:
         ])
         sources = list(set([r["meta"].get("source", "desconocido") for r in top_results]))
         chunks = [r["doc"] for r in top_results]
-        answer = self._generate_answer(query_text, context, sources)
+        answer = self._generate_answer(query_text, context, sources) if generar else ""
 
         return {"answer": answer, "sources": sources, "chunks": chunks, "context": context}
 
