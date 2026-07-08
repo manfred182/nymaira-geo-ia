@@ -1,0 +1,412 @@
+[
+  {
+    "term": "Matrícula inmobiliaria",
+    "aliases": [
+      "matricula",
+      "matrícula",
+      "folio de matrícula",
+      "matricula inmobiliaria"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Número único que identifica un predio en el registro y guarda su historia de dueños y gravámenes.",
+    "analogia": "Es como la cédula de ciudadanía del predio: un solo número que lo identifica para siempre."
+  },
+  {
+    "term": "Avalúo catastral",
+    "aliases": [
+      "avaluo catastral",
+      "avalúo catastral",
+      "valor catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Valor que el Estado le asigna a un predio para efectos de impuestos, según sus características físicas.",
+    "analogia": "Es como el precio que pone la tienda en la etiqueta, pero puesto por la entidad catastral."
+  },
+  {
+    "term": "Avalúo comercial",
+    "aliases": [
+      "avaluo comercial",
+      "avalúo comercial"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Precio estimado de un inmueble si se vendiera hoy en el mercado real.",
+    "analogia": "Es como preguntarle a un vendedor cuánto pagaría alguien por comprarlo ahora mismo."
+  },
+  {
+    "term": "Predio",
+    "aliases": [
+      "predio",
+      "inmueble",
+      "lote"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Un terreno o propiedad con límites definidos, tenga o no construcciones encima.",
+    "analogia": "Es cualquier pedazo de tierra que se puede señalar en un mapa y decir 'esto es mío'."
+  },
+  {
+    "term": "Lindero",
+    "aliases": [
+      "lindero",
+      "linderos",
+      "limite del predio"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Línea que marca dónde termina un predio y empieza el vecino.",
+    "analogia": "Es como la cerca o la raya invisible que separa tu patio del patio del vecino."
+  },
+  {
+    "term": "IGAC",
+    "aliases": [
+      "igac",
+      "instituto geografico agustin codazzi"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Entidad del Estado colombiano encargada de los mapas oficiales y el catastro del país.",
+    "analogia": "Es la oficina nacional que dibuja y guarda el mapa oficial de todos los terrenos de Colombia."
+  },
+  {
+    "term": "SNRP",
+    "aliases": [
+      "snrp",
+      "sistema nacional de registro de predios",
+      "sistema nacional de informacion catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Sistema donde el país reúne y organiza la información de todos los predios registrados.",
+    "analogia": "Es como una gran base de datos nacional donde cada terreno tiene su propia carpeta digital."
+  },
+  {
+    "term": "Catastro multipropósito",
+    "aliases": [
+      "catastro multiproposito",
+      "catastro multipropósito"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Forma moderna de hacer catastro que no solo mide y valora, sino que apoya ordenamiento y desarrollo rural.",
+    "analogia": "Es como pasar de una foto simple del terreno a un expediente completo que sirve para muchas decisiones."
+  },
+  {
+    "term": "Resolución 1040 de 2023",
+    "aliases": [
+      "resolucion 1040",
+      "resolución 1040",
+      "resolucion 1040 de 2023"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Norma colombiana que fija las reglas técnicas para hacer el catastro multipropósito en el país.",
+    "analogia": "Es el manual de instrucciones oficial que dice cómo se debe levantar y actualizar la información de los terrenos."
+  },
+  {
+    "term": "Formación catastral",
+    "aliases": [
+      "formacion catastral",
+      "formación catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Proceso de levantar por primera vez la información física, jurídica y económica de un predio.",
+    "analogia": "Es como abrirle la primera hoja de vida a un terreno que nunca había sido registrado."
+  },
+  {
+    "term": "Actualización catastral",
+    "aliases": [
+      "actualizacion catastral",
+      "actualización catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Revisión periódica que corrige y renueva los datos de un predio ya registrado.",
+    "analogia": "Es como renovar tu documento de identidad cuando cambian tus datos o tu foto."
+  },
+  {
+    "term": "Conservación catastral",
+    "aliases": [
+      "conservacion catastral",
+      "conservación catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Trámite continuo que mantiene al día los cambios de un predio, como divisiones o nuevas construcciones.",
+    "analogia": "Es como ir anotando en la libreta cada cambio que le haces a tu casa a medida que ocurre."
+  },
+  {
+    "term": "Gestor catastral",
+    "aliases": [
+      "gestor catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Entidad autorizada, como una alcaldía o gobernación, para administrar el catastro de su territorio.",
+    "analogia": "Es como el administrador de un edificio, pero encargado de todos los predios de una zona."
+  },
+  {
+    "term": "Operador catastral",
+    "aliases": [
+      "operador catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Empresa o entidad contratada que ejecuta en campo las labores técnicas del catastro.",
+    "analogia": "Es el equipo de trabajo que va físicamente a medir y verificar los terrenos, contratado por el gestor."
+  },
+  {
+    "term": "Escritura pública",
+    "aliases": [
+      "escritura publica",
+      "escritura pública",
+      "escritura"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Documento firmado ante notario que formaliza la compra, venta o cambio de dueño de un inmueble.",
+    "analogia": "Es como el contrato notariado que prueba legalmente que una propiedad cambió de dueño."
+  },
+  {
+    "term": "Título de propiedad",
+    "aliases": [
+      "titulo de propiedad",
+      "título de propiedad",
+      "titulo"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Documento legal que demuestra quién es el dueño reconocido de un predio.",
+    "analogia": "Es la prueba escrita que dice 'este terreno le pertenece legalmente a esta persona'."
+  },
+  {
+    "term": "Impuesto predial",
+    "aliases": [
+      "impuesto predial",
+      "predial"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Pago anual que se hace al municipio por ser dueño de un inmueble, calculado sobre su avalúo.",
+    "analogia": "Es como la cuota anual que cobra el pueblo por tener una propiedad dentro de su territorio."
+  },
+  {
+    "term": "Área catastral",
+    "aliases": [
+      "area catastral",
+      "área catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Extensión de terreno de un predio registrada oficialmente en los documentos del catastro.",
+    "analogia": "Es el tamaño 'oficial' del lote que queda escrito en los papeles, medido en metros cuadrados o hectáreas."
+  },
+  {
+    "term": "Coeficiente catastral",
+    "aliases": [
+      "coeficiente catastral"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Factor numérico que ajusta el valor de un predio según su ubicación, uso o características.",
+    "analogia": "Es como un multiplicador que sube o baja el precio dependiendo de qué tan buena sea la zona."
+  },
+  {
+    "term": "WFS",
+    "aliases": [
+      "wfs",
+      "web feature service"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Servicio en internet que entrega datos de mapas como puntos, líneas y polígonos con toda su información.",
+    "analogia": "Es como pedir a una entidad que te envíe las figuras exactas de un mapa junto con sus datos, no solo la imagen."
+  },
+  {
+    "term": "WMS",
+    "aliases": [
+      "wms",
+      "web map service"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Servicio en internet que entrega un mapa ya dibujado como imagen, sin datos editables detrás.",
+    "analogia": "Es como recibir la foto de un mapa, en vez de recibir los datos con los que se dibujó."
+  },
+  {
+    "term": "Shapefile",
+    "aliases": [
+      "shapefile",
+      "shp"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Formato de archivo muy usado para guardar mapas con formas como predios, ríos o vías.",
+    "analogia": "Es como un archivo de Excel pero en vez de filas de números, guarda formas dibujadas sobre un mapa."
+  },
+  {
+    "term": "GeoJSON",
+    "aliases": [
+      "geojson"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Formato de texto sencillo para guardar formas de mapas y sus datos, fácil de leer por programas.",
+    "analogia": "Es como escribir en una lista de texto las coordenadas de un dibujo para que la computadora lo reconstruya."
+  },
+  {
+    "term": "Buffer",
+    "aliases": [
+      "buffer",
+      "zona de amortiguamiento",
+      "area de influencia"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Zona que se dibuja alrededor de un punto, línea o polígono a una distancia determinada.",
+    "analogia": "Es como trazar un círculo de seguridad de cierto radio alrededor de tu casa en el mapa."
+  },
+  {
+    "term": "CRS",
+    "aliases": [
+      "crs",
+      "sistema de coordenadas",
+      "sistema de referencia",
+      "proyeccion"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Sistema de números que ubica exactamente cualquier punto sobre la superficie de la Tierra.",
+    "analogia": "Es como el sistema de direcciones de una ciudad, pero aplicado a todo el planeta con coordenadas."
+  },
+  {
+    "term": "Cruce espacial",
+    "aliases": [
+      "cruce espacial",
+      "overlay",
+      "superposicion de capas",
+      "interseccion espacial"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Comparar dos mapas superpuestos para ver dónde se tocan, se cruzan o se diferencian sus áreas.",
+    "analogia": "Es como poner dos hojas de calco una sobre otra para ver en qué partes coinciden los dibujos."
+  },
+  {
+    "term": "Centroide",
+    "aliases": [
+      "centroide",
+      "punto central"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Punto que representa el centro geométrico exacto de un predio o figura en el mapa.",
+    "analogia": "Es como el punto donde se equilibraría una figura recortada en cartón si la sostuvieras con un dedo."
+  },
+  {
+    "term": "Capa (en un mapa)",
+    "aliases": [
+      "capa",
+      "capa de mapa",
+      "layer"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Conjunto de datos que se muestra sobre el mapa, como predios, ríos o vías, uno encima de otro.",
+    "analogia": "Es como las hojas transparentes de un cuaderno de dibujo: cada una muestra algo distinto y juntas forman el mapa completo."
+  },
+  {
+    "term": "POT",
+    "aliases": [
+      "pot",
+      "plan de ordenamiento territorial"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Plan municipal que define qué se puede construir o hacer en cada zona de un pueblo o ciudad.",
+    "analogia": "Es como el reglamento del municipio que dice qué usos se permiten en cada barrio o vereda."
+  },
+  {
+    "term": "Zona protegida",
+    "aliases": [
+      "zona protegida",
+      "area protegida"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Espacio natural donde la ley limita actividades para conservar sus recursos y biodiversidad.",
+    "analogia": "Es como un parque cercado donde no se permite talar, cazar ni construir libremente."
+  },
+  {
+    "term": "Licencia ambiental",
+    "aliases": [
+      "licencia ambiental"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Permiso oficial que se necesita antes de hacer un proyecto que pueda afectar el entorno natural.",
+    "analogia": "Es como el permiso que pide un vecino antes de hacer una obra que podría molestar o afectar a los demás."
+  },
+  {
+    "term": "POMCA",
+    "aliases": [
+      "pomca",
+      "plan de ordenacion y manejo de cuencas"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Plan que organiza el uso adecuado del agua y el suelo dentro de una cuenca hidrográfica.",
+    "analogia": "Es como un manual de cuidado para toda la red de ríos y quebradas que alimentan una misma zona."
+  },
+  {
+    "term": "IDEAM",
+    "aliases": [
+      "ideam",
+      "instituto de hidrologia meteorologia y estudios ambientales"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Entidad colombiana que estudia el clima, el agua y los cambios ambientales del país.",
+    "analogia": "Es la oficina nacional que vigila el clima y avisa sobre lluvias, sequías e inundaciones."
+  },
+  {
+    "term": "ANLA",
+    "aliases": [
+      "anla",
+      "autoridad nacional de licencias ambientales"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Entidad que autoriza y controla los grandes proyectos que pueden impactar el medio ambiente.",
+    "analogia": "Es como el inspector nacional que revisa y aprueba los proyectos grandes antes de que empiecen."
+  },
+  {
+    "term": "CAR",
+    "aliases": [
+      "car",
+      "corporacion autonoma regional"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Entidad regional encargada de cuidar los recursos naturales y el ambiente de su territorio.",
+    "analogia": "Es como la autoridad ambiental de la región, encargada de vigilar ríos, bosques y fauna cercanos."
+  },
+  {
+    "term": "MinAmbiente",
+    "aliases": [
+      "minambiente",
+      "ministerio de ambiente",
+      "ministerio de ambiente y desarrollo sostenible"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Entidad del gobierno nacional que define las políticas para proteger el medio ambiente en Colombia.",
+    "analogia": "Es la cabeza nacional que decide las reglas generales para cuidar la naturaleza del país."
+  },
+  {
+    "term": "Parques Nacionales Naturales",
+    "aliases": [
+      "parques nacionales naturales",
+      "pnn"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Entidad que administra las áreas naturales más protegidas del país, como reservas y santuarios.",
+    "analogia": "Es la entidad que cuida los territorios naturales más valiosos de Colombia, como si fueran joyas nacionales."
+  },
+  {
+    "term": "Frontera agrícola",
+    "aliases": [
+      "frontera agricola"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Límite hasta donde está permitido usar la tierra para cultivos o ganadería sin dañar zonas naturales.",
+    "analogia": "Es como una raya que marca hasta dónde se puede sembrar sin invadir el bosque o la reserva natural."
+  },
+  {
+    "term": "Resguardo indígena",
+    "aliases": [
+      "resguardo indigena",
+      "resguardo"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Territorio colectivo reconocido legalmente como propiedad de una comunidad indígena.",
+    "analogia": "Es como un terreno familiar grande, pero de toda una comunidad, protegido por ley para que no se lo quiten."
+  },
+  {
+    "term": "Área de reserva forestal",
+    "aliases": [
+      "area de reserva forestal",
+      "reserva forestal"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Zona declarada por ley para conservar bosques y controlar su uso o aprovechamiento.",
+    "analogia": "Es como un bosque apartado especialmente para que no se acabe con tala o quema descontrolada."
+  }
+]

@@ -68,16 +68,22 @@ def get_model_status() -> dict:
             "ruta": str(llm_path),
         }
 
-    # Verificar ChromaDB
-    chroma_path = settings.vector_db_path
-    if chroma_path.exists():
-        n_files = len(list(chroma_path.rglob("*")))
-        status["chromadb"] = {
-            "disponible": True,
-            "archivos": n_files,
-        }
+    # Verificar FAISS (vector DB)
+    import faiss as _faiss
+    faiss_path = settings.data_dir / "faiss_db" / "index.faiss"
+    if faiss_path.exists():
+        try:
+            idx = _faiss.read_index(str(faiss_path))
+            n_vectors = idx.ntotal
+            status["vectordb"] = {
+                "disponible": True,
+                "motor": "FAISS",
+                "vectores": n_vectors,
+            }
+        except Exception:
+            status["vectordb"] = {"disponible": True, "motor": "FAISS"}
     else:
-        status["chromadb"] = {"disponible": False}
+        status["vectordb"] = {"disponible": False}
 
     status["models_dir_size_mb"] = _dir_size_mb(settings.models_dir)
 

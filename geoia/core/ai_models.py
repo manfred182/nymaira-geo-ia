@@ -4,8 +4,9 @@
 #   - PaddleOCR: extraer texto de PDFs/imágenes/documentos
 #   - Whisper: voz a texto
 #   - GLiNER: extraer entidades (predios, nombres, fechas, direcciones)
-#   - Ollama LLM: respuestas inteligentes
-"""
+ #   - Ollama LLM: respuestas inteligentes
+
+# módulo de modelos AI
 
 from __future__ import annotations
 import io, json, logging, os, re, tempfile
@@ -157,6 +158,8 @@ def procesar_documento(nombre: str, contenido: bytes) -> dict[str, Any]:
         if texto:
             resultado["texto_extraido"] = texto
             resultado["modelos_usados"].append("PaddleOCR")
+        else:
+            resultado["texto_extraido"] = f"[Imagen: {nombre} — OCR no disponible para extraer texto]"
     elif ext == ".pdf":
         # PDF → intentar extraer texto directo, fallback OCR
         try:
@@ -227,8 +230,8 @@ def resumen_documento(resultado: dict) -> str:
         lines.append(f"🔧 Modelos: {' + '.join(resultado['modelos_usados'])}")
 
     texto = resultado.get("texto_extraido", "")
-    if texto and "[" not in texto[:5]:
-        lines.append(f"\n📝 **Texto extraido:**\n{texto[:2000]}")
+    if texto:
+        lines.append(f"\n📝 **Contenido:**\n{texto[:2000]}")
 
     if resultado["entidades"]:
         lines.append(f"\n🏷️ **Entidades encontradas:**")

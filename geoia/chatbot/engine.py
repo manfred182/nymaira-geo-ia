@@ -7,6 +7,50 @@ from typing import AsyncIterator
 logger = logging.getLogger(__name__)
 
 
+# ── Red de seguridad contra degeneración por repetición del LLM ───────
+# Colapsa una frase (palabra o grupo de palabras) que se repite de forma
+# consecutiva: "de uso público de uso público de uso público" → "de uso público".
+_REP_RE = re.compile(r'(\b.{3,60}?\s)(?:\1){2,}', re.DOTALL)
+_REP_PALABRA_RE = re.compile(r'\b(\w{2,})(?:\s+\1\b){2,}', re.IGNORECASE)
+
+
+def _colapsar_repeticiones(texto: str) -> str:
+    """Elimina bucles de frases/palabras repetidas que produce un LLM al degenerar."""
+    if not texto:
+        return texto
+    previo = None
+    # Aplicar varias pasadas porque un colapso puede destapar otro anidado.
+    while previo != texto:
+        previo = texto
+        texto = _REP_RE.sub(lambda m: m.group(1), texto)
+        texto = _REP_PALABRA_RE.sub(lambda m: m.group(1), texto)
+    return texto
+
+
+def _hay_repeticion_degenerada(texto: str, ventana: int = 400) -> bool:
+    """True si el final del texto está atrapado en un bucle de repetición."""
+    cola = texto[-ventana:]
+    return bool(_REP_RE.search(cola) or _REP_PALABRA_RE.search(cola))
+
+
+# El sistema añade las fuentes REALES al final; el modelo no debe escribir URLs
+# (los modelos pequeños inventan enlaces). Esto limpia cualquiera que se cuele.
+_URL_RE = re.compile(r'https?://\S+', re.IGNORECASE)
+
+
+def _sin_urls_inventadas(texto: str) -> str:
+    """Quita URLs y líneas 'Fuente/Referencia: http...' generadas por el modelo."""
+    if not texto:
+        return texto
+    lineas = []
+    for ln in texto.splitlines():
+        bajo = ln.strip().lower()
+        if _URL_RE.search(ln) and (bajo.startswith(("fuente", "referencia", "enlace", "url", "http", "nota")) or "http" in bajo):
+            continue  # descartar la línea entera de cita inventada
+        lineas.append(_URL_RE.sub("", ln))
+    return "\n".join(lineas).rstrip()
+
+
 # ── Detección de coordenadas ──────────────────────────────────────
 
 _COORD_PATTERNS = [
@@ -386,14 +430,76 @@ def _parse_google(html: str, num: int) -> list[dict]:
     return results
 
 
+# ── System prompts ───────────────────────────────────────────────
+
+def _build_system_prompt(community_mode: bool = False, contexto_extra: str = "") -> str:
+    """Construye el system prompt del LLM. Modo normal = técnico (sin cambios de comportamiento).
+    Modo comunidad = lenguaje simple para personas sin formación técnica."""
+    if community_mode:
+        prompt = (
+            "Eres Nymaira, una asistente que ayuda a la gente del común a entender temas de "
+            "catastro (los terrenos, sus medidas, sus dueños) y de medio ambiente en Colombia. "
+            "Respondes SIEMPRE en español.\n\n"
+            "Cómo hablar:\n"
+            "• Usa palabras cotidianas, evita tecnicismos.\n"
+            "• Si necesitas usar una sigla o palabra técnica (IGAC, WFS, avalúo, lindero, POT, "
+            "licencia ambiental, etc.), explícala la primera vez entre paréntesis con una frase muy simple.\n"
+            "• Escribe oraciones cortas. Evita párrafos largos.\n"
+            "• Usa ejemplos o comparaciones cotidianas cuando ayuden (ej: comparar un avalúo con "
+            "\"lo que el gobierno dice que vale tu terreno\").\n"
+            "• Máximo 220 palabras.\n"
+            "• Siempre que sea posible, termina con un paso concreto que la persona puede hacer, "
+            "y una pregunta amable ofreciendo aclarar dudas.\n"
+            "• No inventes datos legales ni cifras; si no tienes la información exacta, dilo con "
+            "honestidad y recomienda verificar con la entidad oficial (IGAC, autoridad ambiental "
+            "regional, alcaldía).\n\n"
+            "Tienes acceso a las mismas capacidades de siempre, pero descritas de forma simple si las "
+            "mencionas: puedes revisar mapas y planos (QGIS), consultar la información oficial de "
+            "terrenos del gobierno (IGAC), conectarte a servicios de mapas en línea del gobierno "
+            "(WFS/WMS) y buscar en documentos y normas ya guardados (RAG)."
+        )
+    else:
+        prompt = (
+            "Eres Nymaira, experta en CATASTRO MULTIPROPÓSITO de Colombia y Sistemas de "
+            "Información Geográfica (SIG). Tu enfoque principal es el catastro; complementas con "
+            "análisis ambiental y productivo cuando aportan al catastro. "
+            "Respondes SIEMPRE en español con lenguaje claro, preciso e inclusivo. "
+            "Usas encabezados markdown (##, ###), listas con •, y emojis temáticos.\n\n"
+            "DATOS FIJOS (no los contradigas):\n"
+            "• La Resolución 1040 de 2023 es del IGAC y regula el PROCESO CATASTRAL con enfoque "
+            "MULTIPROPÓSITO (formación, actualización y conservación catastral, avalúos, gestores "
+            "catastrales). NO trata de geología, ni de 'regiones económicas', ni de censos agrarios.\n"
+            "• El IGAC es la autoridad catastral nacional; los gestores catastrales operan el catastro.\n\n"
+            "Capacidades integradas:\n"
+            "• QGIS: buffer, clip, dissolve, centroides, reproyectar, simplificar\n"
+            "• IGAC Base Catastral Nacional: predios, avalúos, geometrías\n"
+            "• WFS/WMS colombianos: IGAC, IDEAM, UPRA, ANH, ANM en vivo\n"
+            "• RAG sobre el texto real de la Resolución 1040 de 2023\n"
+            "• Búsqueda web en vivo con fuentes oficiales colombianas\n\n"
+            "REGLAS:\n"
+            "1. Sé CONCISA y DIRECTA: al punto, sin relleno. Máx 300 palabras.\n"
+            "2. NO INVENTES. Usa solo los datos del contexto (RAG/web) y los DATOS FIJOS. Si no "
+            "tienes la información, dilo con honestidad y recomienda verificar con el IGAC. Jamás "
+            "inventes nombres de leyes, siglas, artículos ni cifras.\n"
+            "3. NO ESCRIBAS URLs ni enlaces tú misma; el sistema añade las fuentes reales al final. "
+            "Nunca inventes direcciones web.\n"
+            "4. NUNCA repitas frases ni palabras; cada idea una sola vez."
+        )
+    if contexto_extra:
+        prompt += contexto_extra
+    return prompt
+
+
 # ── Modelo más rápido disponible (caché global) ─────────────────────────────
 _FASTEST_MODEL: str | None = None
 
-# Preferencia: modelos pequeños primero (más rápidos), 7B como último recurso
+# Preferencia: equilibrio calidad/velocidad. El 0.5b es más rápido pero alucina
+# en temas normativos; 1.5b es el mejor balance en CPU. Si se quiere más precisión
+# (más lento), poner "qwen2.5:3b" de primero.
 _MODEL_SPEED_PRIORITY = [
-    "gemma2:2b", "qwen2.5:3b", "llama3.2:3b", "phi3:mini",
-    "qwen2.5:7b", "llama3.1:8b", "mistral:7b", "llama3.2:1b",
-    "qwen2.5:0.5b", "smollm2:360m",
+    "qwen2.5:1.5b", "qwen2.5:3b", "qwen2.5:0.5b", "llama3.2:1b",
+    "llama3.2:3b", "phi3:mini", "gemma2:2b",
+    "qwen2.5:7b", "llama3.1:8b", "mistral:7b",
 ]
 
 
@@ -421,21 +527,56 @@ async def _get_fastest_model() -> str:
     return "qwen2.5:7b"
 
 
-async def _warmup_ollama():
-    """Pre-carga el modelo en memoria para que la primera respuesta sea rápida."""
+# Modelo de MAYOR CALIDAD para consultas normativas/catastrales (más preciso,
+# menos alucinación). Más lento en CPU, por eso solo se usa en la ruta fundamentada.
+_QUALITY_MODEL: str | None = None
+_MODEL_QUALITY_PRIORITY = ["qwen2.5:3b", "qwen2.5:7b", "qwen2.5:1.5b", "llama3.2:3b"]
+
+
+async def _get_quality_model() -> str:
+    global _QUALITY_MODEL
+    if _QUALITY_MODEL:
+        return _QUALITY_MODEL
     try:
         import httpx
-        model = await _get_fastest_model()
-        async with httpx.AsyncClient(timeout=30) as c:
-            await c.post("http://localhost:11434/api/chat", json={
-                "model": model,
-                "messages": [{"role": "user", "content": "hola"}],
-                "stream": False,
-                "options": {"num_predict": 1},
-            })
-        logger.info(f"Modelo {model} pre-cargado en memoria")
+        async with httpx.AsyncClient(timeout=2) as c:
+            r = await c.get("http://localhost:11434/api/tags")
+            if r.status_code == 200:
+                installed = {m["name"] for m in r.json().get("models", [])}
+                for candidate in _MODEL_QUALITY_PRIORITY:
+                    if candidate in installed or any(candidate in n for n in installed):
+                        _QUALITY_MODEL = candidate
+                        logger.info(f"Modelo de calidad: {_QUALITY_MODEL}")
+                        return _QUALITY_MODEL
     except Exception:
         pass
+    return await _get_fastest_model()
+
+
+async def _warmup_ollama():
+    """Pre-carga en memoria el modelo rápido y el de calidad (normatividad)."""
+    import httpx
+    modelos = []
+    try:
+        modelos.append(await _get_fastest_model())
+        q = await _get_quality_model()
+        if q not in modelos:
+            modelos.append(q)
+    except Exception:
+        return
+    for model in modelos:
+        try:
+            async with httpx.AsyncClient(timeout=60) as c:
+                await c.post("http://localhost:11434/api/chat", json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": "hola"}],
+                    "stream": False,
+                    "keep_alive": -1,
+                    "options": {"num_predict": 1, "num_ctx": 4096},
+                })
+            logger.info(f"Modelo {model} pre-cargado (keep_alive permanente)")
+        except Exception:
+            pass
 
 
 async def _buscar_en_api_colombia(message: str) -> list[str]:
@@ -449,8 +590,46 @@ async def _buscar_en_api_colombia(message: str) -> list[str]:
 
 class ChatbotEngine:
     def __init__(self):
-        self.sessions: dict[str, list[dict]] = {}
+        # Memoria entre sesiones: restaurar el historial persistido en disco.
+        try:
+            from geoia.chatbot.memory import get_memory
+            self._memory = get_memory()
+            self.sessions: dict[str, list[dict]] = self._memory.load_sessions()
+        except Exception as e:
+            logger.warning(f"Memoria no disponible, arrancando en blanco: {e}")
+            self._memory = None
+            self.sessions = {}
         self.spatial_data: dict[str, dict | None] = {}
+
+    def _persistir(self) -> None:
+        """Guarda el historial en disco (best-effort; nunca rompe el chat)."""
+        if self._memory:
+            try:
+                self._memory.persist_sessions(self.sessions)
+            except Exception:
+                pass
+
+    def _registrar_pregunta(
+        self, session_id: str, message: str, categoria: str | None,
+        es_norma: bool, grounded: bool, n_sources: int,
+    ) -> None:
+        """Registra la consulta para el análisis posterior (best-effort)."""
+        if self._memory:
+            try:
+                self._memory.log_question(
+                    session_id, message, categoria, es_norma, grounded, n_sources
+                )
+            except Exception:
+                pass
+
+    async def _aprender_qa(self, message: str, respuesta: str, titulos: list[str]) -> None:
+        """Guarda en el RAG un par pregunta+respuesta fundamentado (best-effort)."""
+        try:
+            from geoia.api.routes.rag import get_engine as get_rag_engine
+            rag = await get_rag_engine()
+            await asyncio.to_thread(rag.add_learned_qa, message, respuesta, titulos)
+        except Exception as e:
+            logger.debug(f"No se pudo aprender Q&A: {e}")
 
     def set_spatial_data(self, session_id: str, geojson: dict | None):
         self.spatial_data[session_id] = geojson
@@ -459,30 +638,34 @@ class ChatbotEngine:
         return self.spatial_data.get(session_id)
 
     async def _call_ollama(self, messages: list[dict]) -> str:
-        from geoia.core.llm import get_llm
-        llm = get_llm()
-        if llm and hasattr(llm, 'chat'):
-            try:
-                loop = asyncio.get_running_loop()
-                return await loop.run_in_executor(None, llm.chat, messages, 600)
-            except Exception:
-                pass
+        import httpx
         try:
-            import httpx
-            async with httpx.AsyncClient(timeout=25) as client:
+            async with httpx.AsyncClient(timeout=60) as client:
                 r = await client.post(
                     "http://localhost:11434/api/chat",
                     json={"model": await _get_fastest_model(), "messages": messages, "stream": False,
-                          "options": {"num_predict": 300, "temperature": 0.3, "num_ctx": 2048,
-                                      "num_thread": 0, "num_gpu": 99, "top_k": 20}},
+                          "keep_alive": -1,
+                          "options": {"num_predict": 640, "temperature": 0.2, "num_ctx": 4096,
+                                      "num_thread": 0, "num_gpu": 99, "top_k": 40, "top_p": 0.85,
+                                      "repeat_penalty": 1.2, "repeat_last_n": 320,
+                                      "frequency_penalty": 0.6, "presence_penalty": 0.3}},
                 )
                 if r.status_code == 200:
-                    return r.json().get("message", {}).get("content", "")
-        except Exception:
-            pass
+                    data = r.json()
+                    if "error" in data:
+                        logger.warning(f"Ollama error in response: {data['error']}")
+                        return ""
+                    return _colapsar_repeticiones(data.get("message", {}).get("content", ""))
+                else:
+                    logger.warning(f"Ollama HTTP {r.status_code}: {r.text[:300]}")
+        except Exception as e:
+            logger.debug(f"_call_ollama error: {e}")
         return ""
 
-    async def chat(self, message: str, session_id: str = "default", geojson: dict | None = None) -> str:
+    async def chat(
+        self, message: str, session_id: str = "default", geojson: dict | None = None,
+        community_mode: bool = False,
+    ) -> str:
         # Auto-detectar coordenadas en el mensaje si no viene geojson explícito
         if not geojson:
             geojson = _detectar_coordenadas(message)
@@ -491,14 +674,91 @@ class ChatbotEngine:
         if session_id not in self.sessions:
             self.sessions[session_id] = []
         self.sessions[session_id].append({"role": "user", "content": message})
-        respuesta = await self._generate_response(message, self.sessions[session_id], session_id=session_id)
+        respuesta = await self._generate_response(
+            message, self.sessions[session_id], session_id=session_id, community_mode=community_mode
+        )
         self.sessions[session_id].append({"role": "assistant", "content": respuesta})
+        self._persistir()
         return respuesta
 
+    async def _contexto_para_stream(
+        self, message: str, categoria: str | None, es_norma: bool
+    ) -> tuple[str, str, dict]:
+        """Búsqueda ACOTADA (web + fuentes oficiales + RAG) para fundamentar la
+        respuesta del streaming. Devuelve (contexto, bloque_de_fuentes, meta)
+        donde meta indica cuántas fuentes reales (rag/web/oficiales) se usaron."""
+        tasks = [asyncio.wait_for(_buscar_en_web(message, 4), timeout=2.5)]
+
+        if categoria:
+            from geoia.websearch.colombia import search_colombia
+            tasks.append(asyncio.wait_for(search_colombia(message, categoria, num_por_fuente=1), timeout=2.5))
+        else:
+            tasks.append(asyncio.sleep(0, result=[]))
+
+        # Consultar RAG para CUALQUIER tema catastral (no solo si menciona "norma"):
+        # la base tiene la 1040, la Ley 2294 y la guía oficial de catastro multipropósito.
+        if es_norma or categoria == "catastral":
+            try:
+                from geoia.api.routes.rag import get_engine as get_rag_engine
+                rag = await get_rag_engine()
+                tasks.append(asyncio.wait_for(asyncio.to_thread(rag.query, message, 6), timeout=6))
+            except Exception:
+                tasks.append(asyncio.sleep(0, result=None))
+        else:
+            tasks.append(asyncio.sleep(0, result=None))
+
+        res = await asyncio.gather(*tasks, return_exceptions=True)
+        web = res[0] if not isinstance(res[0], Exception) else []
+        col = res[1] if not isinstance(res[1], Exception) else []
+        rag_result = res[2] if not isinstance(res[2], Exception) else None
+
+        piezas: list[str] = []
+        fuentes: list[dict] = []
+        if web:
+            piezas.append("🌐 Web:")
+            for r in web[:4]:
+                t = r.get('title', '')[:120]; u = r.get('url', ''); s = r.get('snippet', '')[:150]
+                piezas.append(f"• {t} — {s}")
+                if u:
+                    fuentes.append({"title": t, "url": u})
+        if col:
+            piezas.append(f"\n🇨🇴 Fuentes oficiales ({categoria}):")
+            for r in col[:4]:
+                t = r.get('title', '')[:100]; u = r.get('url', ''); s = r.get('snippet', '')[:120]
+                piezas.append(f"• {t} — {s}")
+                if u and not any(f['url'] == u for f in fuentes):
+                    fuentes.append({"title": t, "url": u})
+        if rag_result and rag_result.get("chunks"):
+            piezas.append("\n⚖️ Normatividad (Resolución 1040/2023):")
+            for ch in rag_result.get("chunks", [])[:4]:
+                piezas.append(f"• {ch[:220]}...")
+            for s in rag_result.get("sources", []):
+                if s and s not in [f['title'] for f in fuentes]:
+                    fuentes.append({"title": s, "url": ""})
+
+        n_rag = len(rag_result.get("chunks", [])) if (rag_result and isinstance(rag_result, dict)) else 0
+        logger.info(f"_contexto_para_stream: web={len(web)} colombia={len(col)} rag_chunks={n_rag} "
+                    f"contexto_chars={sum(len(p) for p in piezas)}")
+
+        contexto = "\n".join(piezas)
+        fuentes_block = ""
+        if fuentes:
+            lineas = ["**🌐 Fuentes consultadas**"]
+            for f in fuentes[:6]:
+                lineas.append(f"• [{f['title'][:80]}]({f['url']})" if f['url'] else f"• {f['title'][:80]}")
+            fuentes_block = "\n".join(lineas)
+        meta = {
+            "n_rag": n_rag, "n_web": len(web), "n_col": len(col),
+            "n_fuentes": len(fuentes),
+            "titulos_fuentes": [f["title"] for f in fuentes[:6]],
+        }
+        return contexto, fuentes_block, meta
+
     async def stream_chat(
-        self, message: str, session_id: str = "default", geojson: dict | None = None
+        self, message: str, session_id: str = "default", geojson: dict | None = None,
+        community_mode: bool = False,
     ) -> AsyncIterator[str]:
-        """Genera la respuesta token a token. Primero emite el contexto no-LLM, luego hace streaming del LLM."""
+        """Genera la respuesta token a token. Streaming inmediato sin esperar búsquedas."""
         if not geojson:
             geojson = _detectar_coordenadas(message)
         if geojson:
@@ -508,11 +768,15 @@ class ChatbotEngine:
             self.sessions[session_id] = []
         self.sessions[session_id].append({"role": "user", "content": message})
 
-        # ── Verificar si es cruce/WFS para delegar al método full (devuelve texto completo) ──
+        # ── Verificar si es cruce/WFS para delegar al método full ──
         categoria, _, usar_wfs = _extraer_tema(message)
         if usar_wfs and self.get_spatial_data(session_id):
-            respuesta = await self._generate_response(message, self.sessions[session_id], session_id=session_id)
+            respuesta = await self._generate_response(
+                message, self.sessions[session_id], session_id=session_id, community_mode=community_mode
+            )
             self.sessions[session_id].append({"role": "assistant", "content": respuesta})
+            self._registrar_pregunta(session_id, message, categoria, False, False, 0)
+            self._persistir()
             yield respuesta
             return
 
@@ -521,57 +785,202 @@ class ChatbotEngine:
         rapida = _responder(message)
         if rapida:
             self.sessions[session_id].append({"role": "assistant", "content": rapida})
+            self._registrar_pregunta(session_id, message, categoria, False, False, 0)
+            self._persistir()
             yield rapida
             return
 
-        # ── System prompt base — arranca streaming INMEDIATAMENTE ──
-        system = (
-            "Eres Nymaira, experta en catastro colombiano y SIG. "
-            "Respondes siempre en español, de forma clara y concisa (máx 250 palabras). "
-            "Usas emojis con moderación. "
-            "Conoces: IGAC Base Catastral 10-2025, Resolución IGAC 1040/2023, SNRP, UPRA, IDEAM, "
-            "servidores WFS/WMS colombianos, normativa de catastro multipropósito. "
-            "Si hay coordenadas en el mensaje, ofrece visualizarlas en el mapa. "
-            "Sé directa y útil."
-        )
+        # ── Ruta FUNDAMENTADA (híbrido) ──────────────────────────────
+        # Temas de catastro/normatividad/IGAC: buscan en fuentes oficiales + RAG
+        # (acotado ~2-3s) y responden con citas. Sigue en streaming, así la voz
+        # va hablando frase por frase. Preguntas simples caen a la ruta instantánea.
+        es_norma = any(kw in message.lower() for kw in (
+            "resolucion", "1040", "norma", "procedimiento", "conservacion catastral",
+            "formacion catastral", "actualizacion catastral", "avaluo catastral",
+            "reglamento", "decreto", "ley"))
+        if not usar_wfs and len(message) > 12 and (categoria is not None or es_norma):
+            contexto, fuentes_block, ground_meta = await self._contexto_para_stream(message, categoria, es_norma)
+            system_g = _build_system_prompt(community_mode=community_mode)
+            if contexto.strip():
+                system_g += (
+                    "\n\nUsa EXCLUSIVAMENTE estos datos de fuentes oficiales para fundamentar tu "
+                    "respuesta. Si algún dato no está aquí ni lo sabes con certeza, dilo y recomienda "
+                    "verificar con el IGAC. NO escribas URLs ni inventes enlaces (el sistema añade las "
+                    "fuentes al final). No repitas frases.\n\n" + contexto[:2600])
+            history_g = self.sessions[session_id][-4:]
+            chat_g = [{"role": "system", "content": system_g}] + history_g
 
-        # ── Solo buscar en web si el mensaje claramente lo necesita ──
-        _PALABRAS_WEB = ("resolución", "decreto", "norma", "ley ", "acuerdo", "precio",
-                         "trámite", "requisito", "plazo", "2024", "2025", "2026",
-                         "gobierno", "portal", "igac", "snrp", "upra")
-        necesita_web = len(message) > 50 and any(p in message.lower() for p in _PALABRAS_WEB)
-        if necesita_web:
-            try:
-                web_results = await asyncio.wait_for(_buscar_en_web(message, 3), timeout=3)
-                if web_results:
-                    titulos = "\n".join(f"• {r.get('title','')[:100]}" for r in web_results[:3])
-                    system += f"\n\nReferencias web recientes:\n{titulos}"
-            except Exception:
-                pass
+            modelo_calidad = await _get_quality_model()   # 3B para normatividad
+            full_response = ""
+            _prox = 200
+            async for token in self._stream_ollama(chat_g, model=modelo_calidad):
+                full_response += token
+                yield token
+                # El modelo no debe escribir URLs: si empieza una, cortar (las
+                # fuentes reales se añaden abajo).
+                if "http" in full_response[-12:].lower():
+                    logger.info("stream_chat(grounded): URL del modelo detectada, cortando")
+                    break
+                if len(full_response) >= _prox:
+                    _prox = len(full_response) + 120
+                    if _hay_repeticion_degenerada(full_response):
+                        logger.warning("stream_chat(grounded): repetición degenerada, cortando")
+                        break
+
+            if not full_response:
+                from geoia.core.llm import LocalTransformersLLM
+                local_llm = LocalTransformersLLM()
+                if local_llm.is_available:
+                    try:
+                        local_resp = local_llm.chat(chat_g, max_tokens=512)
+                        if local_resp:
+                            local_resp = _colapsar_repeticiones(local_resp[:3000])
+                            self.sessions[session_id].append({"role": "assistant", "content": local_resp})
+                            yield local_resp
+                            if fuentes_block:
+                                yield f"\n\n---\n{fuentes_block}"
+                            return
+                    except Exception:
+                        pass
+                fallback = self._fallback_sin_llm(message, contexto, [], [], [])
+                self.sessions[session_id].append({"role": "assistant", "content": fallback})
+                yield fallback
+                return
+            if fuentes_block:
+                yield f"\n\n---\n{fuentes_block}"
+            respuesta_final = _sin_urls_inventadas(_colapsar_repeticiones(full_response))
+            self.sessions[session_id].append({"role": "assistant", "content": respuesta_final})
+
+            # ── Retroalimentación: registrar la consulta y, si se fundamentó en
+            #    fuentes reales, aprender el par Q&A (control "automático con filtro").
+            n_fuentes = ground_meta.get("n_fuentes", 0)
+            grounded = (ground_meta.get("n_rag", 0) > 0 or ground_meta.get("n_web", 0) > 0
+                        or ground_meta.get("n_col", 0) > 0)
+            self._registrar_pregunta(session_id, message, categoria, es_norma, grounded, n_fuentes)
+            self._persistir()
+            if grounded:
+                await self._aprender_qa(message, respuesta_final, ground_meta.get("titulos_fuentes", []))
+            return
+
+        # ── System prompt base — arranca streaming SIN esperar búsquedas ──
+        if community_mode:
+            system = _build_system_prompt(community_mode=True)
+        else:
+            system = (
+                "Eres Nymaira, asistente de catastro colombiano. "
+                "Responde en español con lenguaje claro e inclusivo, de forma concisa y directa. "
+                "Ve al grano: máximo 250 palabras, sin relleno ni preámbulos. "
+                "NUNCA repitas frases ni palabras; di cada idea una sola vez. "
+                "NO escribas URLs ni inventes enlaces; el sistema añade las fuentes al final. "
+                "No inventes leyes, siglas ni cifras: si no lo sabes, dilo. "
+                "Conoces: IGAC Base Catastral, Resolución 1040/2023, WFS colombianos, normativa catastral."
+            )
+
+        # ── Búsqueda web async (fire-and-forget) para enriquecer respuesta ──
+        web_results_cache = []
+        if len(message) > 15:
+            async def _fetch_web():
+                try:
+                    return await asyncio.wait_for(_buscar_en_web(message, 4), timeout=2.5)
+                except Exception:
+                    return []
+            task_web = asyncio.create_task(_fetch_web())
+        else:
+            task_web = None
 
         history = self.sessions[session_id][-4:]
         chat_messages = [{"role": "system", "content": system}] + history
 
-        # ── Streaming desde Ollama ──
+        # ── Streaming desde Ollama INMEDIATO ──
         full_response = ""
+        _proximo_chequeo = 200
         async for token in self._stream_ollama(chat_messages):
             full_response += token
             yield token
+            # Cortar si el modelo empieza a escribir una URL (las inventa).
+            if "http" in full_response[-12:].lower():
+                break
+            # Cortafuegos: si el modelo entra en un bucle de repetición, detener.
+            if len(full_response) >= _proximo_chequeo:
+                _proximo_chequeo = len(full_response) + 120
+                if _hay_repeticion_degenerada(full_response):
+                    logger.warning("stream_chat: repetición degenerada detectada, cortando stream")
+                    break
+
+        # ── Si llegaron resultados web, adjuntarlos al final ──
+        if task_web is not None:
+            try:
+                web_results_cache = await task_web
+            except Exception:
+                pass
+        if web_results_cache and full_response:
+            enlaces_lines = ["**🌐 Fuentes consultadas**"]
+            for r in web_results_cache[:4]:
+                title = r.get('title','')[:80]
+                url = r.get('url','')
+                if title and url:
+                    enlaces_lines.append(f"• [{title}]({url})")
+            enlaces = "\n".join(enlaces_lines)
+            if len(enlaces_lines) > 1:
+                yield f"\n\n---\n{enlaces}"
 
         if not full_response:
+            from geoia.core.llm import LocalTransformersLLM
+            local_llm = LocalTransformersLLM()
+            if local_llm.is_available:
+                try:
+                    chat_msgs = [{"role": "system", "content": system}] + history[-6:]
+                    local_resp = local_llm.chat(chat_msgs, max_tokens=512)
+                    if local_resp:
+                        local_resp = _colapsar_repeticiones(local_resp[:3000])
+                        self.sessions[session_id].append({"role": "assistant", "content": local_resp})
+                        yield local_resp
+                        return
+                except Exception:
+                    pass
             fallback = self._fallback_sin_llm(message, "", [], [], [])
             self.sessions[session_id].append({"role": "assistant", "content": fallback})
             yield fallback
             return
 
-        self.sessions[session_id].append({"role": "assistant", "content": full_response})
+        if "does not support image" in full_response or "Cannot read" in full_response:
+            logger.warning("Ollama image error filtrado de stream_chat")
+            from geoia.core.llm import LocalTransformersLLM
+            local_llm = LocalTransformersLLM()
+            if local_llm.is_available:
+                try:
+                    chat_msgs = [{"role": "system", "content": system}] + history[-6:]
+                    local_resp = local_llm.chat(chat_msgs, max_tokens=512)
+                    if local_resp:
+                        local_resp = _colapsar_repeticiones(local_resp[:3000])
+                        self.sessions[session_id].append({"role": "assistant", "content": local_resp})
+                        yield local_resp
+                        return
+                except Exception:
+                    pass
+            fallback = self._fallback_sin_llm(message, "", [], [], [])
+            self.sessions[session_id].append({"role": "assistant", "content": fallback})
+            yield fallback
+            return
 
-    async def _stream_ollama(self, messages: list[dict]) -> AsyncIterator[str]:
-        """Stream tokens desde Ollama usando el modelo más rápido disponible."""
+        respuesta_final = _sin_urls_inventadas(_colapsar_repeticiones(full_response))
+        self.sessions[session_id].append({"role": "assistant", "content": respuesta_final})
+        # Retroalimentación: registrar y (si hubo fuentes web) aprender.
+        grounded = bool(web_results_cache)
+        self._registrar_pregunta(session_id, message, categoria, es_norma, grounded, len(web_results_cache or []))
+        self._persistir()
+        if grounded:
+            titulos = [r.get("title", "")[:80] for r in (web_results_cache or [])[:4] if r.get("title")]
+            await self._aprender_qa(message, respuesta_final, titulos)
+
+    async def _stream_ollama(self, messages: list[dict], model: str | None = None) -> AsyncIterator[str]:
+        """Stream tokens desde Ollama. Usa el modelo más rápido salvo que se
+        indique uno específico (p. ej. el de calidad para temas normativos)."""
         import httpx
-        model = await _get_fastest_model()
+        model = model or await _get_fastest_model()
+        # Timeout más amplio: el modelo de calidad (3B) en CPU tarda más.
         try:
-            async with httpx.AsyncClient(timeout=45) as client:
+            async with httpx.AsyncClient(timeout=90) as client:
                 async with client.stream(
                     "POST",
                     "http://localhost:11434/api/chat",
@@ -579,25 +988,36 @@ class ChatbotEngine:
                         "model": model,
                         "messages": messages,
                         "stream": True,
+                        "keep_alive": -1,
                         "options": {
-                            "temperature": 0.3,
-                            "num_predict": 300,
-                            "num_ctx": 2048,
-                            "num_thread": 0,   # 0 = usar todos los cores disponibles
-                            "num_gpu": 99,     # offloading a GPU si existe
-                            "top_k": 20,       # menos candidatos = más rápido
-                            "repeat_penalty": 1.0,
+                            "temperature": 0.2,
+                            "num_predict": 640,
+                            "num_ctx": 4096,
+                            "num_thread": 0,
+                            "num_gpu": 99,
+                            "top_k": 40,
+                            "top_p": 0.9,
+                            "repeat_penalty": 1.2,
+                            "repeat_last_n": 320,
+                            "frequency_penalty": 0.6,
+                            "presence_penalty": 0.3,
                             "mirostat": 0,
                         },
                     },
                 ) as response:
                     if response.status_code != 200:
+                        error_text = await response.aread()
+                        logger.warning(f"Ollama error ({response.status_code}): {error_text.decode()[:500]}")
                         return
                     async for line in response.aiter_lines():
                         if not line:
                             continue
                         try:
                             data = json.loads(line)
+                            if "error" in data:
+                                logger.warning(f"Ollama stream error: {data['error']}")
+                                yield f"\n\n⚠️ Error del modelo: {data['error']}"
+                                return
                             content = data.get("message", {}).get("content", "")
                             if content:
                                 yield content
@@ -857,9 +1277,19 @@ class ChatbotEngine:
     def reset_session(self, session_id: str):
         self.sessions.pop(session_id, None)
         self.spatial_data.pop(session_id, None)
+        self._persistir()
 
-    async def _generate_response(self, message: str, history: list[dict], session_id: str | None = None) -> str:
+    async def _generate_response(
+        self, message: str, history: list[dict], session_id: str | None = None,
+        community_mode: bool = False,
+    ) -> str:
         from geoia.core.llm import _responder
+
+        # ── Respuesta rápida por keywords SIN búsquedas previas ──
+        rapida = _responder(message)
+        if rapida:
+            return rapida
+
         eval_result = _evaluar_solicitud(message)
 
         # ── Respuesta inmediata si hay limitaciones (no_puede) ──
@@ -870,32 +1300,50 @@ class ChatbotEngine:
         categoria, directo_api, usar_wfs = _extraer_tema(message)
         session_id = session_id or "default"
 
-        # ── 1. Busqueda en vivo (paralelo) con timeout global ──
+        # ── 1. Busqueda en vivo (paralelo) con timeouts cortos ──
+        # Buscar en web siempre excepto saludos muy cortos
+        necesita_buscar = len(message) > 15
         tasks = []
-        tasks.append(asyncio.wait_for(_buscar_en_web(message, 4), timeout=5))
-        if categoria:
-            from geoia.websearch.colombia import search_colombia
-            tasks.append(asyncio.wait_for(search_colombia(message, categoria, num_por_fuente=1), timeout=5))
+        if necesita_buscar:
+            tasks.append(asyncio.wait_for(_buscar_en_web(message, 4), timeout=3))
         else:
             tasks.append(asyncio.sleep(0, result=[]))
-        tasks.append(asyncio.wait_for(_buscar_en_wfs(categoria or "catastral", 2 if usar_wfs else 1), timeout=6))
-        tasks.append(asyncio.wait_for(_buscar_en_api_colombia(message) if directo_api else asyncio.sleep(0, result=[]), timeout=5))
 
-        # ── 2. Si es catastro directo (IGAC), buscar en IGAC ──
-        if categoria == "catastral" and directo_api:
+        if categoria and necesita_buscar:
+            from geoia.websearch.colombia import search_colombia
+            tasks.append(asyncio.wait_for(search_colombia(message, categoria, num_por_fuente=1), timeout=3))
+        else:
+            tasks.append(asyncio.sleep(0, result=[]))
+
+        # WFS solo si se pide explícitamente cruce espacial
+        if usar_wfs:
+            tasks.append(asyncio.wait_for(_buscar_en_wfs(categoria or "catastral", 1), timeout=4))
+        else:
+            tasks.append(asyncio.sleep(0, result=[]))
+
+        # API Colombia solo si es consulta directa
+        if directo_api:
+            tasks.append(asyncio.wait_for(_buscar_en_api_colombia(message), timeout=3))
+        else:
+            tasks.append(asyncio.sleep(0, result=[]))
+
+        # IGAC directo
+        if categoria == "catastral" and directo_api and necesita_buscar:
             from geoia.websearch.datos_gov_co import search_igac_datasets
-            tasks.append(asyncio.wait_for(search_igac_datasets(message, categoria, limit=2), timeout=5))
+            tasks.append(asyncio.wait_for(search_igac_datasets(message, categoria, limit=2), timeout=3))
+        else:
+            tasks.append(asyncio.sleep(0, result=[]))
 
-        # ── 2b. Consultar RAG para normatividad catastral ──
-        es_norma = any(kw in message.lower() for kw in ("resolucion", "1040", "norma", "procedimiento catastral",
+        # RAG solo si menciona normatividad
+        es_norma = any(kw in message.lower() for kw in ("resolucion", "1040", "norma", "procedimiento",
                         "conservacion catastral", "formacion catastral", "actualizacion catastral",
                         "avaluo catastral", "reglamento", "decreto", "ley"))
         if es_norma:
-            from geoia.rag.engine import RAGEngine
-            rag = RAGEngine()
+            from geoia.api.routes.rag import get_engine as get_rag_engine
+            rag = await get_rag_engine()
             tasks.append(asyncio.wait_for(
-                asyncio.to_thread(rag.query, message, 5),
-                timeout=15
+                asyncio.to_thread(rag.query, message, 8),
+                timeout=60
             ))
         else:
             tasks.append(asyncio.sleep(0, result=None))
@@ -950,11 +1398,6 @@ class ChatbotEngine:
             if self.get_spatial_data(session_id):
                 return self._responder_con_archivo_cargado(session_id)
 
-        # ── 3. Respuesta rápida si hay keywords conocidos (y no es cruce) ──
-        rapida = _responder(message)
-        if rapida:
-            return rapida
-
         # ── 4. Procesamiento QGIS (buffer, clip, centroides, etc.) ──
         msg_lower = message.lower()
         if self.get_spatial_data(session_id) and any(kw in msg_lower for kw in ("buffer", "centroid", "disolver", "dissolve", "reproyect", "simplif", "fix")):
@@ -988,76 +1431,117 @@ class ChatbotEngine:
                 except Exception as e:
                     logger.warning(f"QGIS processing failed: {e}")
 
-        # ── 5. Construir contexto para LLM ──
+        # ── 5. Construir contexto con fuentes para LLM ──
         contexto_piezas: list[str] = []
+        fuentes_web: list[dict] = []
+
         if web_results:
-            contexto_piezas.append("**Resultados web:**")
+            contexto_piezas.append("**🌐 Resultados web:**")
             for r in web_results[:4]:
-                contexto_piezas.append(f"• {r.get('title','')[:100]}")
+                title = r.get('title','')[:120]
+                url = r.get('url','')
+                snippet = r.get('snippet','')[:150]
+                contexto_piezas.append(f"• {title}")
+                if snippet:
+                    contexto_piezas.append(f"  {snippet}")
+                if url:
+                    fuentes_web.append({"title": title, "url": url})
 
         if colombia_results:
-            contexto_piezas.append(f"\n**Fuentes Colombia ({categoria or 'general'}):**")
+            contexto_piezas.append(f"\n**🇨🇴 Fuentes Colombia ({categoria or 'general'}):**")
             for r in colombia_results[:4]:
-                contexto_piezas.append(f"• {r.get('title','')[:100]} — {r.get('snippet','')[:100]}")
+                title = r.get('title','')[:100]
+                url = r.get('url','')
+                snippet = r.get('snippet','')[:100]
+                contexto_piezas.append(f"• {title} — {snippet}")
+                if url and not any(f['url'] == url for f in fuentes_web):
+                    fuentes_web.append({"title": title, "url": url})
 
         if wfs_lines:
-            contexto_piezas.append("\n**WFS:**")
+            contexto_piezas.append("\n**📡 WFS:**")
             contexto_piezas.extend(wfs_lines[:4])
 
         if api_results:
-            contexto_piezas.append("\n**APIs:**")
+            contexto_piezas.append("\n**🔌 APIs:**")
             for r in api_results[:3]:
-                contexto_piezas.append(f"• {r.get('title','')[:100]}")
+                title = r.get('title','')[:100]
+                url = r.get('url','')
+                snippet = r.get('snippet','')[:100]
+                contexto_piezas.append(f"• {title} — {snippet}")
+                if url and not any(f['url'] == url for f in fuentes_web):
+                    fuentes_web.append({"title": title, "url": url})
 
         if igac_results:
-            contexto_piezas.append("\n**IGAC - Catastro Nacional:**")
+            contexto_piezas.append("\n**🏛️ IGAC - Catastro Nacional:**")
             for r in igac_results[:3]:
-                contexto_piezas.append(f"• {r.get('title','')[:100]}")
+                title = r.get('title','')[:100]
+                url = r.get('url','')
+                contexto_piezas.append(f"• {title}")
+                if url and not any(f['url'] == url for f in fuentes_web):
+                    fuentes_web.append({"title": title, "url": url})
 
-        if rag_result and rag_result.get("answer") and "No hay documentos" not in rag_result["answer"] and "No se encontr" not in rag_result["answer"]:
-            contexto_piezas.append("\n**Normatividad catastral (documentos indexados):**")
-            contexto_piezas.append(f"• {rag_result['answer'][:500]}")
-            contexto_piezas.append(f"  Fuentes: {', '.join(rag_result.get('sources', []))}")
+        if rag_result and rag_result.get("chunks"):
+            rag_sources = rag_result.get('sources', [])
+            rag_chunks = rag_result.get('chunks', [])
+            contexto_piezas.append("\n**⚖️ Normatividad catastral (Resolución 1040/2023):**")
+            for i, chunk in enumerate(rag_chunks[:5], 1):
+                contexto_piezas.append(f"  • Fragmento {i}: {chunk[:200]}...")
+            if rag_sources:
+                contexto_piezas.append(f"  Fuentes: {', '.join(rag_sources)}")
 
         contexto = "\n".join(contexto_piezas)
 
-        # ── 6. Si hay RAG con normatividad, responder directamente ──
-        if rag_result and rag_result.get("answer") and "No hay documentos" not in rag_result["answer"] and "No se encontr" not in rag_result["answer"]:
-            parts = [f"## ⚖️ Según la normatividad catastral\n\n{rag_result['answer'][:1000]}"]
-            if rag_result.get("sources"):
-                parts.append(f"\n\n📄 **Fuentes:** {', '.join(rag_result['sources'])}")
-            if contexto.strip():
-                parts.append(f"\n\n---\n{contexto[:800]}")
-            return "\n".join(parts)
+        # Formatear bloque de fuentes web para citar al final
+        fuentes_block = ""
+        if fuentes_web:
+            fuentes_lines = ["**🌐 Fuentes consultadas:**"]
+            for i, f in enumerate(fuentes_web[:6], 1):
+                fuentes_lines.append(f"  {i}. [{f['title'][:80]}]({f['url']})")
+            fuentes_block = "\n".join(fuentes_lines)
+
+        # ── 6. Si hay RAG con chunks, se envían al LLM junto con el contexto ──
+        if rag_result and rag_result.get("chunks"):
+            rag_context = rag_result.get("context", "")
+            if rag_context:
+                contexto_piezas.append(f"\n**📄 Texto completo extraído de documentos:**\n{rag_context[:2000]}")
 
         # ── 7. LLM con contexto real ──
-        prompt = (
-            "Eres Nymaira, experta en catastro colombiano y Sistemas de Información Geográfica (SIG). "
-            "Respondes SIEMPRE en español, de forma clara, estructurada y precisa. "
-            "Usas encabezados markdown (##, ###), listas con •, y emojis temáticos cuando ayudan a la claridad.\n\n"
-            "Capacidades integradas:\n"
-            "• QGIS: buffer, clip, dissolve, centroides, reproyectar, simplificar\n"
-            "• IGAC Base Catastral Nacional 10-2025: predios, avalúos, geometrías\n"
-            "• WFS/WMS colombianos: IGAC, IDEAM, UPRA, ANH, ANM en vivo\n"
-            "• RAG sobre Resolución 1040 de 2023 y normatividad catastral\n"
-            "• Detección automática de coordenadas en el chat\n\n"
-            "Si el usuario pega coordenadas, las detectas y ofreces mostrarlas en el mapa. "
-            "Si hay datos espaciales cargados, los analizas. "
-            "Máx 400 palabras. Responde al punto, sin relleno."
-        )
+        prompt = _build_system_prompt(community_mode=community_mode)
+        prompt += "\n\nIMPORTANTE: Incluye fuentes y referencias web en tu respuesta cuando las tengas. Cita las URLs si están disponibles."
         if contexto.strip():
-            prompt += "\n\nDatos en vivo:\n" + contexto[:2000]
+            prompt += "\n\nDatos en vivo de fuentes oficiales:\n" + contexto[:2500]
 
         chat_messages = [{"role": "system", "content": prompt}] + history[-6:]
         ollama_resp = await self._call_ollama(chat_messages)
 
         if ollama_resp:
-            resp = ollama_resp[:1000]
-            if contexto.strip():
-                resp += "\n\n---\n" + contexto[:1000]
+            if "does not support image" in ollama_resp or "Cannot read" in ollama_resp:
+                logger.warning("Ollama image error filtrado de _generate_response")
+                return self._fallback_sin_llm(message, contexto, wfs_lines, colombia_results, web_results)
+            resp = ollama_resp[:3000]
+            if fuentes_block:
+                resp += "\n\n---\n" + fuentes_block[:800]
+            if contexto.strip() and not fuentes_block:
+                resp += "\n\n---\n" + contexto[:800]
             return resp
 
-        # ── 7. Fallback inteligente sin LLM ──
+        # ── 7. Fallback: LocalTransformersLLM ──
+        from geoia.core.llm import LocalTransformersLLM
+        local_llm = LocalTransformersLLM()
+        if local_llm.is_available:
+            try:
+                local_resp = local_llm.chat(chat_messages, max_tokens=512)
+                if local_resp:
+                    resp = local_resp[:3000]
+                    if fuentes_block:
+                        resp += "\n\n---\n" + fuentes_block[:800]
+                    if contexto.strip() and not fuentes_block:
+                        resp += "\n\n---\n" + contexto[:800]
+                    return resp
+            except Exception:
+                pass
+
+        # ── 8. Fallback inteligente sin LLM ──
         return self._fallback_sin_llm(message, contexto, wfs_lines, colombia_results, web_results)
 
     def _fallback_sin_llm(self, message: str, contexto: str, wfs_lines: list, colombia: list, web: list) -> str:

@@ -1,14 +1,21 @@
 from __future__ import annotations
+import os
 import re
+import json
+import pickle
 import logging
 import time
 import asyncio
+import numpy as np
+from pathlib import Path
 from typing import Any, Optional
 from geoia.core.config import settings
 from geoia.core.models import setup_hf_env
-from geoia.core.llm import get_llm
+from geoia.core.llm import get_llm, OllamaLLM
 
 logger = logging.getLogger(__name__)
+
+VECTOR_DIM = 384
 
 
 class RAGEngine:
@@ -17,14 +24,22 @@ class RAGEngine:
 
     def __init__(self):
         setup_hf_env()
-        self.vector_store = None
         self.embedding_model = None
+        self.index = None
+        self.documents: list[str] = []
+        self.metadatas: list[dict] = []
+        self.ids: list[str] = []
         self._init_components()
+
+    def _faiss_paths(self):
+        safe = str(settings.data_dir).replace("´", "").replace("'", "")
+        base = Path(safe) / "faiss_db"
+        base.mkdir(parents=True, exist_ok=True)
+        return base / "index.faiss", base / "data.pkl"
 
     def _init_components(self):
         try:
             from sentence_transformers import SentenceTransformer
-            import chromadb
 
             model_path = str(settings.embedding_model_path)
             if settings.embedding_model_path.exists():
@@ -33,23 +48,77 @@ class RAGEngine:
                 self.embedding_model = SentenceTransformer(settings.embedding_model)
                 self.embedding_model.save(model_path)
 
-            chroma_client = chromadb.PersistentClient(
-                path=str(settings.vector_db_path)
-            )
-            self.vector_store = chroma_client.get_or_create_collection(
-                name="documentos_catastrales",
-                metadata={"hnsw:space": "cosine"},
-            )
+            import faiss
+            idx_path, data_path = self._faiss_paths()
+            if idx_path.exists() and data_path.exists():
+                self.index = faiss.read_index(str(idx_path))
+                with open(data_path, "rb") as f:
+                    data = pickle.load(f)
+                    self.documents = data["documents"]
+                    self.metadatas = data["metadatas"]
+                    self.ids = data["ids"]
+                logger.info(f"FAISS cargado: {self.index.ntotal} vectores")
+            else:
+                self.index = faiss.IndexFlatIP(VECTOR_DIM)
+                logger.info("FAISS index creado (vacio)")
+
+            # Pre-calentar LLM local para evitar demora en primera consulta
+            try:
+                from geoia.core.llm import get_llm
+                llm = get_llm()
+                if llm is not None and hasattr(llm, 'is_loaded'):
+                    logger.info(f"LLM local disponible: {llm.is_loaded}")
+            except Exception:
+                pass
         except Exception as e:
             logger.error(f"RAG init error: {e}")
 
-    def _embed(self, texts: list[str]) -> list[list[float]]:
+    def _save(self):
+        try:
+            import faiss
+            idx_path, data_path = self._faiss_paths()
+            faiss.write_index(self.index, str(idx_path))
+            with open(data_path, "wb") as f:
+                pickle.dump({
+                    "documents": self.documents,
+                    "metadatas": self.metadatas,
+                    "ids": self.ids,
+                }, f)
+        except Exception as e:
+            logger.error(f"FAISS save error: {e}")
+
+    def _embed(self, texts: list[str]) -> np.ndarray:
+        import faiss as _faiss
         if self.embedding_model:
-            return self.embedding_model.encode(texts).tolist()
-        return [[0.0] * 384 for _ in texts]
+            emb = self.embedding_model.encode(texts)
+            _faiss.normalize_L2(emb)
+            return emb
+        return np.zeros((len(texts), VECTOR_DIM), dtype=np.float32)
 
     def _score_result(self, document: str, metadata: dict) -> float:
         score = 0.0
+
+        # Preferir GUÍAS CURADAS (.md): español limpio, redactado y correcto.
+        # Los volcados crudos del PDF traen tablas, anexos y fragmentos ruidosos
+        # que un modelo pequeño regurgita mal.
+        source = metadata.get("source", "")
+        if source.endswith(".md"):
+            score += 6.0
+
+        # Q&A APRENDIDO del propio chat: útil pero NO autoritativo (es texto
+        # generado por un modelo pequeño). Prioridad baja: solo aflora cuando las
+        # fuentes curadas no cubren la consulta; jamás desplaza a una guía .md.
+        if source == "aprendido":
+            score += 0.5
+
+        # Penalizar fragmentos tipo tabla/índice/basura de PDF.
+        if document.count("|") >= 4:
+            score -= 4.0
+        if document:
+            legibles = sum(1 for c in document if c.isalpha() or c.isspace())
+            if legibles / len(document) < 0.70:   # demasiados símbolos/dígitos
+                score -= 3.0
+
         model = metadata.get("model", "")
         if "PyMuPDF" in model:
             score += 2.0
@@ -60,6 +129,12 @@ class RAGEngine:
         
         doc_lower = document.lower()
         if "resolución 1040" in doc_lower or "resolución 1040 de 2023" in doc_lower:
+            score += 4.0
+        
+        if "resolución 794" in doc_lower or "resolución 794 de 2026" in doc_lower or "resolución 0794" in doc_lower:
+            score += 4.0
+        
+        if "resolución 746" in doc_lower or "resolución 746 de 2024" in doc_lower:
             score += 4.0
         
         if "resolución única" in doc_lower or "gestoría catastral multipropósito" in doc_lower:
@@ -84,6 +159,9 @@ class RAGEngine:
         if any(term in doc_lower for term in ["director", "gerencia", "comité", "intendente", "drd"]):
             score += 1.2
         
+        if source.endswith("anexo_01_glosario.pdf") or source.endswith("anexo_03_documentacion_minima.pdf") or source.endswith("anexo_09_prefijos_codigo.pdf") or source.endswith("anexo_10_consistencia_logica.pdf"):
+            score += 2.0
+        
         return score
 
     def _extract_text(self, filename: str, content: bytes) -> tuple[str, str]:
@@ -91,6 +169,7 @@ class RAGEngine:
 
         if ext == ".pdf":
             try:
+                import fitz
                 doc = fitz.open(stream=content, filetype="pdf")
                 pages = []
                 for page in doc:
@@ -132,16 +211,24 @@ class RAGEngine:
             return 0
 
         try:
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
             splitter = RecursiveCharacterTextSplitter(
-                chunk_size=500,
-                chunk_overlap=50,
+                chunk_size=1500,
+                chunk_overlap=200,
                 length_function=len,
-                separators=["\n\n", "\n", ". ", "; ", "\?", "!"],
+                separators=["\n\n", "\n", ". ", "; ", "?", "!"],
             )
             chunks = splitter.split_text(text)
         except ImportError:
-            chunks = [text[i:i+500] for i in range(0, len(text), 250)]
+            try:
+                from langchain.text_splitter import RecursiveCharacterTextSplitter
+                splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=1500, chunk_overlap=200, length_function=len,
+                    separators=["\n\n", "\n", ". ", "; ", "?", "!"],
+                )
+                chunks = splitter.split_text(text)
+            except ImportError:
+                chunks = [text[i:i+1500] for i in range(0, len(text), 750)]
 
         if not chunks:
             return 0
@@ -152,83 +239,154 @@ class RAGEngine:
 
         embeddings = self._embed(chunks)
         ids = [f"{filename}_{i}" for i in range(len(chunks))]
+        metas = [{"source": filename, "model": model_used, "chunk": i} for i in range(len(chunks))]
 
-        if self.vector_store:
-            self.vector_store.add(
-                documents=chunks,
-                embeddings=embeddings,
-                ids=ids,
-                metadatas=[{"source": filename, "model": model_used, "chunk": i} for i in range(len(chunks))],
-            )
+        if self.index is not None:
+            self.index.add(embeddings)
+            self.documents.extend(chunks)
+            self.metadatas.extend(metas)
+            self.ids.extend(ids)
+            self._save()
 
         return len(chunks)
 
-    def query(self, query_text: str, top_k: int = 5) -> dict:
-        if not self.vector_store:
-            return {"answer": "No hay documentos indexados. Ingrese documentos primero.", "sources": []}
+    def _norm_pregunta(self, q: str) -> str:
+        """Normaliza una pregunta para deduplicar lo aprendido."""
+        return re.sub(r"\s+", " ", (q or "").lower().strip())[:200]
 
-        query_embedding = self._embed([query_text])[0]
+    def add_learned_qa(self, question: str, answer: str, sources: list[str] | None = None) -> bool:
+        """Guarda un par pregunta+respuesta FUNDAMENTADA en la base vectorial
+        para reutilizarlo después. Devuelve True si se agregó algo nuevo.
 
+        Seguro con FAISS: se ejecuta en el mismo proceso del servidor. Se
+        deduplica por pregunta normalizada para no inflar el índice."""
+        if self.index is None or not question or not answer:
+            return False
+        question = question.strip()
+        answer = answer.strip()
+        if len(answer) < 40:   # respuestas triviales/errores no aportan
+            return False
+
+        norm = self._norm_pregunta(question)
+        for meta in self.metadatas:
+            if meta.get("source") == "aprendido" and meta.get("norm") == norm:
+                return False  # ya aprendida
+
+        doc = f"Pregunta: {question}\nRespuesta: {answer}"
         try:
-            results = self.vector_store.query(
-                query_embeddings=[query_embedding],
-                n_results=min(top_k, 100),
-                include=["documents", "metadatas", "distances"],
-            )
+            embeddings = self._embed([doc])
+            self.index.add(embeddings)
+            self.documents.append(doc)
+            self.metadatas.append({
+                "source": "aprendido",
+                "model": "qa_feedback",
+                "chunk": 0,
+                "norm": norm,
+                "fuentes": ", ".join(sources or [])[:300],
+                "ts": time.time(),
+            })
+            self.ids.append(f"aprendido_{int(time.time()*1000)}")
+            self._save()
+            logger.info(f"RAG aprendió Q&A: {question[:60]}...")
+            return True
         except Exception as e:
-            logger.error(f"ChromaDB query error: {e}")
-            return {"answer": "Error al buscar en los documentos indexados.", "sources": []}
+            logger.warning(f"No se pudo aprender Q&A: {e}")
+            return False
 
-        if not results["documents"] or not results["documents"][0]:
-            return {"answer": "No se encontraron documentos relevantes.", "sources": []}
+    def listar_aprendido(self) -> list[dict]:
+        """Devuelve los pares Q&A aprendidos (para inspección/depuración)."""
+        out = []
+        for doc, meta in zip(self.documents, self.metadatas):
+            if meta.get("source") == "aprendido":
+                out.append({"texto": doc[:400], "fuentes": meta.get("fuentes", ""),
+                            "ts": meta.get("ts")})
+        return out
 
-        documents = results["documents"][0]
-        metadatas = results["metadatas"][0]
-        distances = results.get("distances", [[0]])[0]
-
-        scored_results = []
-        for doc, meta, dist in zip(documents, metadatas, distances):
-            score = self._score_result(doc, meta)
-            scored_results.append({"doc": doc, "meta": meta, "dist": dist, "score": score})
-
-        scored_results.sort(key=lambda x: x["score"], reverse=True)
-
-        top_results = scored_results[:top_k]
-        context = "\n\n".join([r["doc"] for r in top_results])
-        sources = list(set([m.get("source", "desconocido") for m in [r["meta"] for r in top_results]]))
-
-        prompt = (
-            "Eres un asistente experto en normatividad catastral colombiana. Tenemos acceso a documentos oficiales de normatividad catastral, específicamente a la Resolución 1040 de 2023 del IGAC. "
-            "Responde usando SOLO la información de los documentos proporcionados, siguiendo estas reglas exactas:\n\n"
-            "1. Cita artículos específicos si los documentos los mencionan (ej: 'Art. 1°, Res. 1040/2023')\n"
-            "2. Si el documento menciona procedimientos, describe el PASO A PASO\n"
-            "3. Si el documento proporciona plazos, fechas o requisitos: enumera todos NOMBRES los elementos\n"
-            "4. Si el documento tiene TITULARES, incluye el título como subtítulo\n"
-            "5. Si encuentras 'Comité', 'GERENCIA', 'DRD' (Director Regional) en el texto: preserva el contenido exacto, no lo reformules\n"
-            "6. No agregues información que no esté explicitamente en los documentos aportados\n"
-            "7. Si la pregunta es sobre X Y el documento dice Z: responde con Z, no con X\n"
-            "8. Si la respuesta es SATISFACTORIA: indica 'SATISFACTORIO' explícitamente\n"
-            "9. Si el texto del documento incluye LISTAS o ENUMERACIONES: manténlas exactamente como aparecen\n"
-            "10. NO respondas con frases genéricas como 'consultar el documento completo' a menos que NO haya términos específicos\n\n"
-            "DISEMINACIÓN CATÁSTRAL: El documento contiene numerosos verbos descendentes, territoriales, administrativos y de control [[kata]] que deben ser conservados.\n\n"
-            "NORMAS DE ÉPOCA: Preserva la terminología exacta del período (2023), incluyendo asignaciones territoriales, horarios y designaciones institucionales.\n\n"
-            f"Documentos (ordenados por relevancia):\n---\n{context}\n---\n\n"
-            f"Pregunta: {query_text}\n\n"
-            "Respuesta (citando artículos, preserving terminología exacta, orden según relevancia):"
-        )
-
-        llm = get_llm()
-        if not llm or not hasattr(llm, "generate"):
-            return {"answer": "LLM no disponible para generar respuesta.", "sources": sources}
-
-        answer = llm.generate(prompt, system="Eres un asistente experto en normatividad catastral colombiana. Responde solo con la información de los documentos proporcionados. Preserva la terminología, títulos, artículos y enumeraciones exactas. Cita fuentes correctamente. Ordena según relevancia. Responde paso a paso para procedimientos y preserva la terminología exacta del período 2023.")
-
-        if not answer:
-            answer = (
-                "Basado en los documentos consultados (Resolución 1040 de 2023): No se encontró respuesta específica en los textos aportados."
+    def _generate_answer(self, query_text: str, context: str, sources: list[str]) -> str:
+        try:
+            from geoia.core.llm import get_llm
+            llm = get_llm()
+            if llm is None:
+                return ""
+            system = (
+                "Eres un asistente experto en normatividad catastral colombiana. "
+                "Responde en español de forma clara, concisa y precisa (máximo 3 párrafos). "
+                "Usa EXCLUSIVAMENTE la información del contexto proporcionado. "
+                "No uses tu conocimiento previo. Si el contexto no contiene la respuesta, "
+                "di que no dispones de esa información. No inventes datos."
             )
+            context_clean = context[:2800].replace("|", " ").replace("\n\n\n", "\n\n")
+            prompt = (
+                f"Contexto:\n{context_clean}\n\n"
+                f"Pregunta: {query_text}\n\n"
+                f"Responde solo con la información del contexto:"
+            )
+            answer = llm.generate(prompt, system=system, max_tokens=120)
+            return answer.strip()
+        except Exception as e:
+            logger.error(f"RAG answer generation error: {e}")
+            return ""
 
-        return {"answer": answer, "sources": sources}
+    def query(self, query_text: str, top_k: int = 8) -> dict:
+        if self.index is None or self.index.ntotal == 0:
+            return {"answer": "", "sources": [], "chunks": []}
+
+        def _search(q: str, n: int) -> list[dict]:
+            emb = self._embed([q])
+            n_res = min(n, self.index.ntotal)
+            dists, idxs = self.index.search(emb, n_res)
+            results = []
+            for idx, dist in zip(idxs[0], dists[0]):
+                if idx < 0 or idx >= len(self.documents):
+                    continue
+                results.append({
+                    "doc": self.documents[idx],
+                    "meta": self.metadatas[idx],
+                    "dist": float(dist),
+                })
+            return results
+
+        # Multi-consulta para mejor cobertura
+        queries = [query_text]
+        lower = query_text.lower()
+        if "794" in lower:
+            queries.append("Resolución 794 de 2026")
+        if "746" in lower:
+            queries.append("Resolución 746 de 2024")
+        if "1040" in lower:
+            queries.append("Resolución 1040 de 2023")
+        if "glosario" in lower:
+            queries.append("glosario de términos")
+        if "prefijo" in lower or "código homologado" in lower:
+            queries.append("prefijos del código homologado de identificación predial")
+        if "documentación" in lower or "entrega" in lower:
+            queries.append("documentación mínima para entrega")
+
+        seen_ids = set()
+        all_results = []
+        for q in queries:
+            results = _search(q, top_k * 2)
+            for r in results:
+                rid = f"{r['meta'].get('source','')}_{r['meta'].get('chunk', 0)}"
+                if rid not in seen_ids:
+                    seen_ids.add(rid)
+                    all_results.append(r)
+
+        for r in all_results:
+            r["score"] = self._score_result(r["doc"], r["meta"])
+
+        all_results.sort(key=lambda x: x["score"], reverse=True)
+        top_results = all_results[:top_k]
+
+        context = "\n\n---\n\n".join([
+            f"[Fragmento {i+1} - {r['meta'].get('source','desconocido')}]\n{r['doc']}"
+            for i, r in enumerate(top_results)
+        ])
+        sources = list(set([r["meta"].get("source", "desconocido") for r in top_results]))
+        chunks = [r["doc"] for r in top_results]
+        answer = self._generate_answer(query_text, context, sources)
+
+        return {"answer": answer, "sources": sources, "chunks": chunks, "context": context}
 
     def clear_cache(self) -> None:
         """Limpiar cache local para forzar re-inicialización."""

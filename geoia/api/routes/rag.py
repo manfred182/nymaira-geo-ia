@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import logging
@@ -7,7 +8,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _engine = None
-def get_engine():
+_engine_lock = asyncio.Lock()
+
+
+async def get_engine():
+    global _engine
+    if _engine is None:
+        async with _engine_lock:
+            if _engine is None:
+                from geoia.rag.engine import RAGEngine
+                _engine = await asyncio.to_thread(RAGEngine)
+    return _engine
+
+
+def get_engine_sync():
     global _engine
     if _engine is None:
         from geoia.rag.engine import RAGEngine
@@ -33,8 +47,8 @@ class RAGIngestURLRequest(BaseModel):
 @router.post("/query", response_model=RAGQueryResponse)
 async def query(req: RAGQueryRequest):
     try:
-        engine = get_engine()
-        result = engine.query(req.query, req.top_k)
+        engine = await get_engine()
+        result = await asyncio.to_thread(engine.query, req.query, req.top_k)
         return RAGQueryResponse(response=result["answer"], sources=result["sources"])
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -43,9 +57,9 @@ async def query(req: RAGQueryRequest):
 @router.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
     try:
-        engine = get_engine()
+        engine = await get_engine()
         content = await file.read()
-        result = engine.ingest_document(file.filename, content)
+        result = await asyncio.to_thread(engine.ingest_document, file.filename, content)
         return {"message": "Documento ingestado", "filename": file.filename, "chunks": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -53,6 +67,7 @@ async def ingest(file: UploadFile = File(...)):
 
 @router.post("/ingest-url")
 async def ingest_url(req: RAGIngestURLRequest):
+    import os
     import httpx
     from urllib.parse import urlparse
     from geoia.websearch.dns_cache import resolve
@@ -70,11 +85,10 @@ async def ingest_url(req: RAGIngestURLRequest):
         raise HTTPException(status_code=502, detail=f"No se pudo descargar {req.url}: {e}")
 
     filename = req.filename or os.path.basename(urlparse(req.url).path) or "documento.pdf"
-    import os
 
     try:
-        engine = get_engine()
-        chunks = engine.ingest_document(filename, content)
+        engine = await get_engine()
+        chunks = await asyncio.to_thread(engine.ingest_document, filename, content)
         return {
             "message": "Documento descargado e ingestado",
             "filename": filename,

@@ -8,12 +8,17 @@ logger = logging.getLogger(__name__)
 
 def _responder(message):
     msg = message.lower().strip()
-    # Solo respuestas rápidas para mensajes MUY cortos (saludos puros, sin pregunta real)
-    # Si el mensaje tiene más de 60 caracteres o contiene palabras de consulta, deja que el LLM responda
+    # Revisar saludos primero (siempre responder rápido, aunque tenga palabras consulta)
+    SALUDOS_RE = r"\bhola\b|\bbuenos d[ií]as\b|\bbuenas tardes\b|\bbuenas noches\b|\bbuenas\b|\bsaludos\b|\bque tal\b|\bcomo estas\b"
+    if re.search(SALUDOS_RE, msg) and len(msg) < 80:
+        return "¡Hola! ¿En qué te puedo ayudar hoy? Puedo resolver dudas sobre catastro, predios, linderos, trámites o análisis espacial. 😊"
+
+    # Mensajes largos o con consulta real → delegar al LLM
     palabras_consulta = ("puede", "puedes", "cómo", "como", "qué", "que", "cuál", "cual",
                          "dónde", "donde", "cuándo", "cuando", "por favor", "necesito",
                          "busca", "muestra", "analiza", "cruza", "calcul", "verifica",
-                         "predio", "catastro", "archivo", "polígono", "capa", "mapa")
+                         "predio", "catastro", "archivo", "polígono", "capa", "mapa",
+                         "igac", "snrp", "upra", "ideam", "norma", "ley", "decreto")
     if len(msg) > 60 or any(p in msg for p in palabras_consulta):
         return None
     pares = [
@@ -59,8 +64,6 @@ def _responder(message):
             "Para cualquier trámite, lo mejor es ir a la oficina de catastro "
             "de tu municipio con la documentación del predio. Ellos te guían paso a paso."
         )),
-        (r"\bhola\b|\bbuenos d[ií]as\b|\bbuenas tardes\b|\bbuenas noches\b|\bbuenas\b",
-         "¡Hola! ¿En qué te puedo ayudar hoy? Puedo resolver dudas sobre catastro, predios, linderos, trámites o análisis espacial. 😊"),
         (r"\bgracias\b", "¡Con gusto! Cuando tengas más dudas, aquí estoy. 😊"),
         (r"\bqu[eé] puedes hacer\b|\bqu[eé] sabes hacer\b|\bfunciones\b|\bcapacidades\b",
          "Puedo ayudarte con:\n\n"
@@ -131,10 +134,12 @@ class LocalTransformersLLM:
             self._tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
             self._model = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                dtype="auto",
                 device_map="auto",
                 local_files_only=True,
             )
+            if self._model.generation_config.max_length is not None and self._model.generation_config.max_length < 256:
+                self._model.generation_config.max_length = 2048
             self._pipe = hf_pipeline(
                 "text-generation",
                 model=self._model,
@@ -157,18 +162,18 @@ class LocalTransformersLLM:
             messages, tokenize=False, add_generation_prompt=True
         )
 
-    def generate(self, prompt: str, system: str | None = None, max_tokens: int = 512) -> str:
+    def generate(self, prompt: str, system: str | None = None, max_tokens: int = 256) -> str:
         if not self._load():
             return ""
 
         try:
             full_prompt = self._build_prompt(prompt, system)
+            self._model.generation_config.max_length = 2048
             result = self._pipe(
                 full_prompt,
                 max_new_tokens=max_tokens,
-                temperature=0.3,
-                top_p=0.9,
-                do_sample=True,
+                max_length=2048,
+                do_sample=False,
                 pad_token_id=self._tokenizer.eos_token_id,
             )
             texto = result[0]["generated_text"]
@@ -306,16 +311,31 @@ class OllamaLLM:
         return ""
 
 
+_llm_instance: OllamaLLM | LocalTransformersLLM | None = None
+
+
 def get_llm():
-    """Retorna el mejor LLM disponible: Ollama > LocalTransformers > None."""
+    """Retorna el mejor LLM disponible (singleton): Ollama > LocalTransformers > None."""
+    global _llm_instance
+    if _llm_instance is not None:
+        return _llm_instance
     ollama_url = _check_ollama()
     if ollama_url:
-        llm = OllamaLLM(base_url=ollama_url, model="qwen2.5:7b")
-        if llm.is_available:
-            logger.info("Usando Ollama qwen2.5:7b")
-            return llm
-    transformers_llm = LocalTransformersLLM()
-    if transformers_llm.is_available:
-        logger.info("Usando LocalTransformers")
-        return transformers_llm
+        try:
+            import httpx
+            r = httpx.get(f"{ollama_url}/api/tags", timeout=3)
+            if r.status_code == 200:
+                models = [m["name"] for m in r.json().get("models", [])]
+                for candidate in ("qwen2.5:0.5b", "qwen2.5:1.5b", "llama3.2:1b", "qwen2.5:3b", "qwen2.5:7b"):
+                    if candidate in models or any(candidate in n for n in models):
+                        _llm_instance = OllamaLLM(base_url=ollama_url, model=candidate)
+                        logger.info(f"Usando Ollama {candidate}")
+                        return _llm_instance
+        except Exception:
+            pass
+    _llm_instance = LocalTransformersLLM()
+    if _llm_instance.is_available:
+        logger.info("Usando LocalTransformers (Qwen2.5-0.5B-Instruct)")
+        return _llm_instance
+    _llm_instance = None
     return None

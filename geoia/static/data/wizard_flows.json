@@ -1,0 +1,59 @@
+[
+  {
+    "icon": "🏠",
+    "title": "Consultar matrícula",
+    "description": "Te explico cómo consultar la matrícula inmobiliaria de un predio en el SNRP",
+    "needs_upload": false,
+    "chat_message": "¿Cómo consulto una matrícula inmobiliaria?"
+  },
+  {
+    "icon": "📐",
+    "title": "Validar linderos",
+    "description": "Aprende a validar los linderos de tu predio usando coordenadas",
+    "needs_upload": false,
+    "chat_message": "¿Cómo valido los linderos de mi predio?"
+  },
+  {
+    "icon": "📄",
+    "title": "Trámites catastrales",
+    "description": "Conoce los trámites más comunes: actualización, corrección de área, cambio de uso",
+    "needs_upload": false,
+    "chat_message": "¿Qué trámites catastrales existen?"
+  },
+  {
+    "icon": "🛰️",
+    "title": "Cruce espacial con WFS",
+    "description": "Sube tu archivo y cruza con capas oficiales (IGAC, IDEAM, UPRA, etc.)",
+    "needs_upload": true,
+    "upload_hint": "📎 Sube tu archivo espacial (SHP, GeoJSON, KML, GPKG) para hacer el cruce",
+    "chat_message": "Quiero hacer un cruce espacial con capas oficiales"
+  },
+  {
+    "icon": "📊",
+    "title": "Consultar avalúo",
+    "description": "Te explico cómo se calcula el avalúo catastral y dónde consultarlo",
+    "needs_upload": false,
+    "chat_message": "¿Cómo se calcula el avalúo catastral?"
+  },
+  {
+    "icon": "🌍",
+    "title": "Datos ambientales (IDEAM)",
+    "description": "Consulta capas de ecosistemas, áreas protegidas, cuencas y más",
+    "needs_upload": false,
+    "chat_message": "Busca información ambiental en IDEAM"
+  },
+  {
+    "icon": "🌾",
+    "title": "Aptitud de suelo (UPRA)",
+    "description": "Consulta la aptitud de uso del suelo para proyectos productivos",
+    "needs_upload": false,
+    "chat_message": "¿Cuál es la aptitud de suelo de mi predio?"
+  },
+  {
+    "icon": "📜",
+    "title": "Normatividad catastral (Res. 1040)",
+    "description": "Pregunta sobre la Resolución 1040 de 2023 y procedimientos catastrales",
+    "needs_upload": false,
+    "chat_message": "Explícame la Resolución 1040 de 2023"
+  }
+]

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import asyncio
 
@@ -75,16 +76,66 @@ async def pull_ollama_model(req: PullRequest):
     return {"status": "descargando", "model": model, "message": f"Descargando {model}... puede tardar varios minutos"}
 
 
+@router.get("/llm/ollama/pull/stream")
+async def pull_ollama_stream(model: str):
+    """Stream de progreso de descarga de modelo Ollama."""
+    model = model.strip()
+    if not model:
+        raise HTTPException(400, "Nombre de modelo requerido")
+
+    async def event_generator():
+        import httpx, json
+        try:
+            async with httpx.AsyncClient(timeout=600) as client:
+                async with client.stream("POST", "http://localhost:11434/api/pull", json={"name": model, "stream": True}) as r:
+                    if r.status_code != 200:
+                        yield f"data: {json.dumps({'error': 'Ollama error', 'status': r.status_code})}\n\n"
+                        return
+                    async for line in r.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                status = data.get("status", "")
+                                completed = data.get("completed", 0)
+                                total = data.get("total", 0)
+                                yield f"data: {json.dumps({'status': status, 'completed': completed, 'total': total, 'model': model})}\n\n"
+                            except Exception:
+                                pass
+        except httpx.ConnectError:
+            yield f"data: {json.dumps({'error': 'Ollama no disponible'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 async def _do_pull(model: str):
     import httpx, logging
     logger = logging.getLogger(__name__)
     try:
         async with httpx.AsyncClient(timeout=600) as client:
-            r = await client.post("http://localhost:11434/api/pull", json={"name": model, "stream": False})
-            if r.status_code == 200:
-                logger.info(f"Modelo {model} descargado OK")
-            else:
-                logger.warning(f"Error descargando {model}: {r.text[:200]}")
+            async with client.stream("POST", "http://localhost:11434/api/pull", json={"name": model, "stream": True}) as r:
+                if r.status_code == 200:
+                    async for line in r.aiter_lines():
+                        if line:
+                            try:
+                                data = json.loads(line)
+                                if data.get("status"):
+                                    logger.info(f"Pull {model}: {data['status']}")
+                            except Exception:
+                                pass
+                    logger.info(f"Modelo {model} descargado OK")
+                else:
+                    logger.warning(f"Error descargando {model}: {await r.text()}")
     except Exception as e:
         logger.error(f"Pull {model} falló: {e}")
 

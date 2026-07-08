@@ -22,7 +22,6 @@ class Settings(BaseSettings):
     llm_endpoints: List[dict] = []
 
     # RAG / Vectores
-    vector_db_path: Path = data_dir / "chroma_db"
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_model_path: Path = models_dir / "sentence-transformers" / embedding_model
 

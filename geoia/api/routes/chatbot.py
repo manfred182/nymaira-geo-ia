@@ -20,6 +20,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
     geojson: dict | None = None
+    community_mode: bool = False
 
 
 class ChatResponse(BaseModel):
@@ -53,9 +54,18 @@ EXT_ESPACIALES = {".geojson", ".json", ".kml", ".kmz", ".gpkg", ".zip",
 async def chat(req: ChatRequest):
     try:
         engine = get_engine()
-        respuesta = await engine.chat(req.message, req.session_id, geojson=req.geojson)
+        respuesta = await engine.chat(
+            req.message, req.session_id, geojson=req.geojson, community_mode=req.community_mode
+        )
+        if "does not support image" in respuesta or "Cannot read" in respuesta:
+            logger.warning(f"Ollama image error filtrado del chat response")
+            respuesta = "Lo siento, ocurrió un error interno al procesar tu consulta. Intenta de nuevo con una pregunta más específica."
         return ChatResponse(response=respuesta, session_id=req.session_id)
     except Exception as e:
+        err = str(e)
+        if "does not support image" in err or "Cannot read" in err:
+            logger.warning(f"Ollama image error filtrado: {err}")
+            return ChatResponse(response="Lo siento, ocurrió un error al procesar la imagen. Por favor intenta con un archivo de texto o PDF.", session_id=req.session_id)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -130,9 +140,12 @@ async def upload_file(file: UploadFile = File(...)):
         except Exception as e:
             logger.warning(f"Error en procesar_documento: {e}")
             # Fallback: solo devolver metadata del archivo
+            fallback_msg = f"Archivo cargado: {fname}\n\nTipo: {ext}\nTamaño: {size_kb}KB"
+            if ext in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"):
+                fallback_msg += "\n\nℹ️ No se pudo extraer texto de la imagen (OCR no disponible). Puedes preguntarme sobre ella."
             return UploadResponse(
                 filename=fname,
-                content=f"Archivo cargado: {fname}\n\nTipo: {ext}\nTamaño: {size_kb}KB",
+                content=fallback_msg,
                 size_kb=size_kb,
             )
     except Exception as e:
@@ -164,10 +177,16 @@ async def chat_stream(req: ChatRequest):
 
     async def generate():
         try:
-            async for chunk in engine.stream_chat(req.message, req.session_id, req.geojson):
+            async for chunk in engine.stream_chat(
+                req.message, req.session_id, req.geojson, community_mode=req.community_mode
+            ):
                 yield f"data: {json.dumps({'content': chunk}, ensure_ascii=False)}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            err = str(e)
+            if "does not support image" in err or "Cannot read" in err:
+                logger.warning(f"Ollama image error filtrado: {err}")
+            else:
+                yield f"data: {json.dumps({'error': err})}\n\n"
         finally:
             yield "data: [DONE]\n\n"
 
@@ -187,3 +206,24 @@ async def reset_session(session_id: str = "default"):
     engine = get_engine()
     engine.reset_session(session_id)
     return {"message": "Sesión reiniciada", "session_id": session_id}
+
+
+@router.get("/analisis")
+async def analisis_preguntas(limite: int | None = None):
+    """Informe de retroalimentación: temas más consultados, % de respuestas
+    fundamentadas y vacíos de información (preguntas que la base no cubrió)."""
+    from geoia.chatbot.memory import get_memory
+    return get_memory().analizar(limite=limite)
+
+
+@router.get("/aprendido")
+async def listar_aprendido():
+    """Pares pregunta+respuesta que el sistema ha aprendido de conversaciones
+    fundamentadas y reutiliza en consultas futuras."""
+    try:
+        from geoia.api.routes.rag import get_engine as get_rag_engine
+        rag = await get_rag_engine()
+        items = rag.listar_aprendido()
+        return {"total": len(items), "items": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

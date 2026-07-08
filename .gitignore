@@ -16,3 +16,23 @@ venv/
 .pytest_cache/
 *.spec
 *.pyc
+
+# Logs
+data/logs/
+*.log
+server.log
+server_stderr.txt
+server_stdout.txt
+
+# Datos de runtime (memoria de aprendizaje y vector stores generados)
+data/chat_memory/
+data/faiss_db/
+data/chroma_db_test/
+
+# Artefactos de prueba ad-hoc
+test_tts.mp3
+test_tts.py
+
+# Claude Code local (config específica de la máquina)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from geoia.core.config import settings
 
-from geoia.api.routes import chatbot, rag, geo, automation, models, llm, search, processing
+from geoia.api.routes import chatbot, rag, geo, automation, models, llm, search, processing, tts
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,7 @@ app.include_router(geo.router, prefix="/api/v1/geo", tags=["Geoespacial"])
 app.include_router(automation.router, prefix="/api/v1/automation", tags=["Automatización"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["Modelos"])
 app.include_router(processing.router, prefix="/api/v1/geo", tags=["Procesamiento"])
+app.include_router(tts.router, prefix="/api/v1/tts", tags=["TTS"])
 
 static_dir = settings.project_root / "geoia" / "static"
 if static_dir.exists():
@@ -108,6 +109,7 @@ else:
 async def startup():
     asyncio.create_task(_ensure_ollama_model())
     asyncio.create_task(_warmup_llm())
+    asyncio.create_task(_seed_rag())
 
 
 async def _warmup_llm():
@@ -118,6 +120,19 @@ async def _warmup_llm():
         await _warmup_ollama()
     except Exception:
         pass
+
+
+async def _seed_rag():
+    """Precarga documentos base en la base de conocimiento RAG 2 segundos
+    después de arrancar, para no competir con la carga inicial."""
+    await asyncio.sleep(2)
+    try:
+        from geoia.rag.seed import seed_default_documents, seed_pdfs_background
+        await seed_default_documents()
+        # PDFs grandes se procesan en background (toma minutos)
+        asyncio.create_task(seed_pdfs_background())
+    except Exception as e:
+        logger.debug(f"Auto-seed RAG omitido por error: {e}")
 
 
 @app.get("/models/status")

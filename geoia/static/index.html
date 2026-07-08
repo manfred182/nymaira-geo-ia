@@ -41,6 +41,8 @@
 
     html, body {
       height: 100%;
+      margin: 0;
+      padding: 0;
     }
 
     body {
@@ -57,8 +59,9 @@
     /* ========== LAYOUT ========== */
     .main-container {
       display: flex;
-      width: 100%;
-      height: 100vh;
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
       position: relative;
       z-index: 1;
     }
@@ -71,9 +74,6 @@
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      height: 100vh;
-      position: relative;
-      z-index: 2;
       overflow: hidden;
     }
 
@@ -89,13 +89,14 @@
     }
 
     .sidebar-brand .brand-logo {
-      width: 280px;
-      height: 280px;
+      width: 100%;
+      max-width: 200px;
+      height: auto;
+      aspect-ratio: 1/1;
       flex-shrink: 0;
       object-fit: contain;
       mix-blend-mode: screen;
       filter: brightness(1.1) contrast(1.1);
-      margin-bottom: -90px;
     }
 
     .sidebar-brand h1 {
@@ -195,7 +196,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      min-height: 0;
       overflow: hidden;
       position: relative;
       z-index: 1;
@@ -238,13 +239,82 @@
       50% { opacity: 0.4; }
     }
 
+    /* ========== COMMUNITY MODE TOGGLE ========== */
+    .community-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .community-toggle .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .community-toggle .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .community-toggle .switch-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 999px;
+      transition: var(--transition);
+    }
+
+    .community-toggle .switch-track::before {
+      content: "";
+      position: absolute;
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background: var(--text);
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+
+    .community-toggle .switch input:checked + .switch-track {
+      background: var(--accent);
+    }
+
+    .community-toggle .switch input:checked + .switch-track::before {
+      transform: translateX(16px);
+      background: var(--bg-card);
+    }
+
+    .community-toggle .switch input:focus-visible + .switch-track {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .community-toggle .switch-label {
+      white-space: nowrap;
+    }
+
+    /* Feedback visual: mensajes más legibles en Modo Comunidad */
+    .community-mode .chat-msg {
+      font-size: 1.05em;
+      line-height: 1.6;
+    }
+
     .content {
       flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      max-width: 1100px;
-      width: 100%;
-      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0;
+      overflow: hidden;
     }
 
     /* ========== CARDS ========== */
@@ -376,22 +446,22 @@
     .chat-area {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 120px);
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .welcome-banner {
-      padding: 40px 20px;
-      text-align: center;
+      padding: 24px 20px;
+      text-align: left;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 200px;
+      align-items: stretch;
+      justify-content: flex-start;
+      min-height: 0;
       border-bottom: 1px solid rgba(255,255,255,0.05);
       position: relative;
-      overflow: hidden;
-      max-width: 2500px;
-      margin: 0 auto;
+      overflow: visible;
       width: 100%;
       background: #0a1628;
       z-index: 1;
@@ -727,6 +797,125 @@
       border-color: var(--accent);
     }
 
+    /* ========== PANEL DE PREGUNTAS GUIADAS (WIZARD) ========== */
+    .wizard-panel {
+      width: 100%;
+      margin-top: 16px;
+      padding: 0;
+    }
+    .wizard-panel-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 12px;
+      text-align: center;
+    }
+    .wizard-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .wizard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 600px) {
+      .wizard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .wizard-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      text-align: left;
+      width: 100%;
+      min-height: 120px;
+      justify-content: space-between;
+    }
+    .wizard-btn:hover, .wizard-btn:focus-visible {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .wizard-btn-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .wizard-btn-title .wizard-icon {
+      font-size: 1.15rem;
+      margin-right: 6px;
+    }
+    .wizard-btn-desc {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      line-height: 1.35;
+    }
+    .wizard-btn-badge {
+      display: inline-block;
+      margin-top: 2px;
+      font-size: 0.68rem;
+      color: var(--accent);
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 8px;
+      padding: 1px 7px;
+    }
+    .chat-attach-highlight {
+      animation: wizard-pulse 1.4s ease-in-out 3;
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.25);
+    }
+    @keyframes wizard-pulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(56,189,248,0.25); }
+      50% { box-shadow: 0 0 0 6px rgba(56,189,248,0.45); }
+    }
+
+    /* ========== TTS (voz) BOTONES ========== */
+    .tts-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .tts-btn {
+      background: rgba(56,189,248,0.07);
+      color: var(--accent);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 14px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    .tts-btn:hover {
+      background: rgba(56,189,248,0.18);
+      border-color: var(--accent);
+    }
+    .tts-btn.tts-stop {
+      color: #f87171;
+      border-color: rgba(248,113,113,0.35);
+      background: rgba(248,113,113,0.07);
+      display: none;
+    }
+    .tts-btn.tts-stop.active {
+      display: inline-block;
+    }
+
     /* ========== WELCOME MESSAGE ========== */
     .welcome-msg {
       background: linear-gradient(135deg, rgba(56,189,248,0.05) 0%, rgba(129,140,248,0.05) 100%);
@@ -846,6 +1035,154 @@
       margin: 6px 0;
     }
 
+    /* ========== GLOSARIO INTERACTIVO ========== */
+    .glossary-term {
+      border-bottom: 1px dashed var(--accent);
+      cursor: help;
+      text-decoration: none;
+      color: inherit;
+    }
+    .glossary-term:hover, .glossary-term:focus {
+      background: var(--accent-bg);
+      outline: none;
+      border-bottom-style: solid;
+    }
+
+    .glossary-popover {
+      position: absolute;
+      z-index: 2000;
+      max-width: 320px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      color: var(--text);
+      animation: glossary-fade-in 0.12s ease;
+    }
+    @keyframes glossary-fade-in {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .glossary-popover .gp-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .glossary-popover .gp-term {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+    .glossary-popover .gp-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .glossary-popover .gp-close:hover { color: var(--text); background: var(--bg-hover); }
+    .glossary-popover .gp-def { margin: 0 0 6px; color: var(--text); }
+    .glossary-popover .gp-analogy {
+      margin: 0;
+      color: var(--text-dim);
+      font-style: italic;
+      border-left: 2px solid var(--accent2);
+      padding-left: 8px;
+    }
+
+    /* ── Botón de acceso al glosario en topbar ── */
+    .glossary-open-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 6px 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .glossary-open-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Modal de glosario completo ── */
+    .glossary-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .glossary-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 640px;
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: glossary-fade-in 0.15s ease;
+    }
+    .glossary-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .glossary-modal-header h3 { color: var(--text); font-size: 1rem; }
+    .glossary-modal-header .gp-close { font-size: 1.2rem; }
+    .glossary-modal-search {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .glossary-modal-search input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    .glossary-modal-search input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .glossary-modal-body {
+      overflow-y: auto;
+      padding: 8px 18px 18px;
+    }
+    .glossary-modal-body h4 {
+      color: var(--accent2);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 14px 0 6px;
+    }
+    .glossary-entry {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .glossary-entry:last-child { border-bottom: none; }
+    .glossary-entry .ge-term { font-weight: 600; color: var(--text); font-size: 0.88rem; }
+    .glossary-entry .ge-def { color: var(--text-dim); font-size: 0.82rem; margin-top: 3px; }
+    .glossary-entry .ge-analogy { color: var(--text-muted); font-size: 0.8rem; margin-top: 3px; font-style: italic; }
+    .glossary-modal-empty { color: var(--text-dim); font-size: 0.85rem; padding: 20px 0; text-align: center; }
+
     /* ========== SCROLL ========== */
     ::-webkit-scrollbar {
       width: 6px;
@@ -868,9 +1205,38 @@
     .tab {
       display: none;
     }
-
     .tab.active {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      padding: 24px;
+      overflow: hidden auto;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* Chat tab: ocupa todo sin padding extra, scroll solo en mensajes */
+    #tab-chatbot.active {
+      padding: 0;
+      overflow: hidden;
+    }
+    #tab-chatbot.active .card:first-child {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #tab-chatbot.active .card:first-child .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    #tab-chatbot.active .card:first-child .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     /* ========== RESPONSIVE ========== */
@@ -898,7 +1264,7 @@
         padding: 16px 8px;
       }
 
-      .content {
+      .tab.active {
         padding: 16px;
       }
 
@@ -921,7 +1287,7 @@
         padding: 8px;
       }
 
-      .content {
+      .tab.active {
         padding: 10px;
       }
 
@@ -978,9 +1344,26 @@
     <div class="main">
       <header class="topbar">
         <h2 id="topbar-title">Chat</h2>
-        <div class="status-badge" aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>conectado</span>
+        <div style="display:flex;align-items:center;gap:16px">
+          <button type="button" class="glossary-open-btn" onclick="GlossaryModule.openModal()" aria-haspopup="dialog" aria-label="Abrir glosario completo de términos catastrales y ambientales">📖 Glosario</button>
+          <label class="community-toggle" for="community-mode-toggle" title="Respuestas con lenguaje más simple y cercano" aria-label="Modo Comunidad: respuestas con lenguaje más simple y cercano">
+            <span class="switch">
+              <input type="checkbox" id="community-mode-toggle" onchange="CommunityMode.toggle(this.checked)">
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+            <span class="switch-label">🌱 Modo Comunidad</span>
+          </label>
+          <label class="community-toggle" for="auto-speak-toggle" title="Nymaira lee sus respuestas en voz alta apenas termina de escribirlas" aria-label="Leer respuestas en voz alta automáticamente">
+            <span class="switch">
+              <input type="checkbox" id="auto-speak-toggle" onchange="AutoSpeak.toggle(this.checked)">
+              <span class="switch-track" aria-hidden="true"></span>
+            </span>
+            <span class="switch-label">🔊 Leer en voz alta</span>
+          </label>
+          <div class="status-badge" aria-live="polite">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>conectado</span>
+          </div>
         </div>
       </header>
       <div class="content" id="main-content" role="main">
@@ -991,8 +1374,9 @@
                <div class="welcome-banner" id="welcome-banner"></div>
                <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Historial de chat"></div>
               <div class="chat-input-row">
-                <button class="btn btn-ghost btn-upload" onclick="document.getElementById('chat-file-input').click()" title="Adjuntar archivo" aria-label="Adjuntar archivo">📎</button>
+                <button class="btn btn-ghost btn-upload" id="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="Adjuntar archivo" aria-label="Adjuntar archivo">📎</button>
                 <button class="btn btn-ghost btn-upload" id="mic-btn" onclick="toggleMic()" title="Grabar voz" aria-label="Grabar mensaje de voz">🎤</button>
+                <button class="btn btn-ghost btn-upload" id="tts-btn" onclick="playLastResponseTTS()" title="Leer última respuesta" aria-label="Leer última respuesta con voz">🔊</button>
                 <input type="file" id="chat-file-input" accept=".txt,.csv,.json,.geojson,.pdf,.xlsx,.xls,.shp,.dbf,.prj,.shx,.kml,.kmz,.gdb,.jpg,.jpeg,.png,.tif,.tiff,.py" style="display:none" onchange="uploadChatFile(this)" aria-label="Seleccionar archivo para adjuntar">
                 <input type="text" id="chat-input" placeholder="Escribe tu consulta aquí..." autofocus aria-label="Mensaje de chat" onkeypress="if(event.key==='Enter') sendChat()">
                 <span id="chat-file-label" class="file-label hidden" onclick="clearChatFile()" role="button" tabindex="0" aria-label="Archivo adjunto"></span>
@@ -1204,6 +1588,12 @@
             <p class="desc">Descarga modelos de lenguaje directamente desde Ollama. Requiere tener <strong>Ollama</strong> instalado y corriendo (<code style="color:var(--accent)">ollama serve</code>).</p>
             <div id="ollama-models-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px"></div>
             <div id="pull-status" style="margin-top:10px;font-size:.83rem;color:var(--text-dim)" aria-live="polite"></div>
+            <div id="pull-progress" style="display:none;margin-top:8px">
+              <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                <div id="pull-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width .3s"></div>
+              </div>
+              <div id="pull-progress-text" style="font-size:.75rem;color:var(--text-dim);margin-top:4px"></div>
+            </div>
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
               <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:6px">Instalar modelo personalizado:</p>
               <div class="flex gap" style="gap:8px">
@@ -1239,6 +1629,67 @@
     // ========== CONFIG ==========
     const API = '';
     const SUGGESTIONS = ['Procedimiento para corrección de área', 'Calcular avalúo de terreno', 'Validar linderos de parcela', 'Buscar matrícula catastral'];
+
+    // ========== PREGUNTAS GUIADAS (WIZARD) ==========
+    let WIZARD_FLOWS = [];
+    fetch('/static/data/wizard_flows.json')
+      .then(r => r.ok ? r.json() : [])
+      .then(flows => {
+        WIZARD_FLOWS = Array.isArray(flows) ? flows : [];
+        if (typeof ChatModule !== 'undefined') ChatModule.renderWizard();
+      })
+      .catch(() => { WIZARD_FLOWS = []; });
+
+    // ========== COMMUNITY MODE MODULE ==========
+    const CommunityMode = (() => {
+      const STORAGE_KEY = 'nymaira_community_mode';
+
+      const isActive = () => localStorage.getItem(STORAGE_KEY) === 'true';
+
+      const apply = (active) => {
+        document.body.classList.toggle('community-mode', active);
+        const cb = document.getElementById('community-mode-toggle');
+        if (cb) cb.checked = active;
+      };
+
+      const toggle = (active) => {
+        localStorage.setItem(STORAGE_KEY, active ? 'true' : 'false');
+        apply(active);
+      };
+
+      const init = () => apply(isActive());
+
+      return { isActive, toggle, init };
+    })();
+
+    // ========== AUTO-SPEAK MODULE (voz automática, independiente del Modo Comunidad) ==========
+    const AutoSpeak = (() => {
+      const STORAGE_KEY = 'nymaira_auto_speak';
+
+      // Activado por defecto: Nymaira escribe y habla a la vez, salvo que el usuario lo apague.
+      const isActive = () => {
+        const v = localStorage.getItem(STORAGE_KEY);
+        return v === null ? true : v === 'true';
+      };
+
+      const apply = (active) => {
+        const cb = document.getElementById('auto-speak-toggle');
+        if (cb) cb.checked = active;
+      };
+
+      const toggle = (active) => {
+        localStorage.setItem(STORAGE_KEY, active ? 'true' : 'false');
+        apply(active);
+        if (!active) {
+          TTS.stop();
+          if (window.ChatModule && ChatModule.stopSpeak) ChatModule.stopSpeak();
+        }
+      };
+
+      const init = () => apply(isActive());
+
+      return { isActive, toggle, init };
+    })();
 
     // ========== TAB SYSTEM MODULE ==========
     const TabSystem = (() => {
@@ -1312,11 +1763,395 @@
       };
     })();
 
+    // ========== GLOSSARY MODULE (glosario interactivo catastral/ambiental) ==========
+    let GLOSSARY_TERMS = [];
+
+    const GlossaryModule = (() => {
+      let compiled = null;       // [{term, categoria, definicion_simple, analogia, regex}]
+      let activePopover = null;
+      let activeModal = null;
+
+      // ── Cargar datos del glosario (no bloqueante) ──
+      const load = async () => {
+        try {
+          const r = await fetch('/static/data/glossary.json');
+          if (!r.ok) return;
+          const data = await r.json();
+          if (Array.isArray(data)) GLOSSARY_TERMS = data;
+        } catch (_) {
+          // Si falla, el resto de la app sigue funcionando sin glosario.
+        }
+      };
+
+      const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escapeHtml = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+      // ── Compilar aliases -> regex una sola vez, cuando haga falta ──
+      const getCompiled = () => {
+        if (compiled) return compiled;
+        if (!Array.isArray(GLOSSARY_TERMS) || !GLOSSARY_TERMS.length) return [];
+        compiled = GLOSSARY_TERMS
+          .filter(t => t && t.term && Array.isArray(t.aliases) && t.aliases.length)
+          .map(t => {
+            const alts = [...t.aliases].sort((a, b) => b.length - a.length).map(escapeRe);
+            return { ...t, regex: new RegExp('\\b(' + alts.join('|') + ')\\b', 'iu') };
+          });
+        return compiled;
+      };
+
+      const SKIP_TAGS = new Set(['PRE', 'CODE', 'A', 'SCRIPT', 'STYLE']);
+      const hasSkippedAncestor = (node) => {
+        let el = node.parentElement;
+        while (el) {
+          if (SKIP_TAGS.has(el.tagName)) return true;
+          if (el.classList && el.classList.contains('glossary-term')) return true;
+          el = el.parentElement;
+        }
+        return false;
+      };
+
+      // ── Envolver la primera aparición de cada término en un contenedor DOM ya insertado ──
+      const highlight = (container) => {
+        const terms = getCompiled();
+        if (!terms.length || !container) return;
+
+        const used = new Set();
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+          if (!node.nodeValue || !node.nodeValue.trim()) continue;
+          if (hasSkippedAncestor(node)) continue;
+          textNodes.push(node);
+        }
+
+        textNodes.forEach((textNode) => {
+          if (used.size >= terms.length) return; // ya se resaltaron todos los términos disponibles
+
+          // Un mismo nodo de texto puede contener varios términos distintos
+          // (ej. "IGAC y también la ANLA"); vamos consumiendo el texto en
+          // fragmentos hasta que no queden más coincidencias nuevas.
+          const frag = document.createDocumentFragment();
+          let remaining = textNode.nodeValue;
+          let changed = false;
+
+          while (remaining && used.size < terms.length) {
+            let match = null;
+            let matchedTerm = null;
+
+            for (const t of terms) {
+              if (used.has(t.term)) continue;
+              const m = remaining.match(t.regex);
+              if (m && (!match || m.index < match.index)) {
+                match = m;
+                matchedTerm = t;
+              }
+            }
+            if (!match || !matchedTerm) break;
+
+            changed = true;
+            used.add(matchedTerm.term);
+
+            const before = remaining.slice(0, match.index);
+            const matched = match[0];
+            if (before) frag.appendChild(document.createTextNode(before));
+
+            const span = document.createElement('span');
+            span.className = 'glossary-term';
+            span.dataset.term = matchedTerm.term;
+            span.tabIndex = 0;
+            span.setAttribute('role', 'button');
+            span.setAttribute('aria-label', `Ver definición de ${matchedTerm.term}`);
+            span.textContent = matched;
+            frag.appendChild(span);
+
+            remaining = remaining.slice(match.index + matched.length);
+          }
+
+          if (!changed) return;
+          if (remaining) frag.appendChild(document.createTextNode(remaining));
+
+          textNode.parentNode.replaceChild(frag, textNode);
+        });
+      };
+
+      // ── Popover de definición ──
+      const closePopover = () => {
+        if (activePopover) { activePopover.remove(); activePopover = null; }
+      };
+
+      const findTerm = (name) => (GLOSSARY_TERMS || []).find(t => t.term === name);
+
+      const openPopover = (anchorEl, termName) => {
+        closePopover();
+        const t = findTerm(termName);
+        if (!t) return;
+
+        const pop = document.createElement('div');
+        pop.className = 'glossary-popover';
+        pop.setAttribute('role', 'tooltip');
+        pop.innerHTML = `
+          <div class="gp-header">
+            <span class="gp-term">${escapeHtml(t.term)}</span>
+            <button type="button" class="gp-close" aria-label="Cerrar definición">✕</button>
+          </div>
+          <p class="gp-def">${escapeHtml(t.definicion_simple || '')}</p>
+          ${t.analogia ? `<p class="gp-analogy">💡 ${escapeHtml(t.analogia)}</p>` : ''}
+        `;
+        document.body.appendChild(pop);
+
+        const rect = anchorEl.getBoundingClientRect();
+        const popRect = pop.getBoundingClientRect();
+        let top = window.scrollY + rect.bottom + 6;
+        let left = window.scrollX + rect.left;
+        const maxLeft = window.scrollX + window.innerWidth - popRect.width - 10;
+        if (left > maxLeft) left = Math.max(10, maxLeft);
+        if (top + popRect.height > window.scrollY + window.innerHeight) {
+          top = window.scrollY + rect.top - popRect.height - 6;
+        }
+        pop.style.top = top + 'px';
+        pop.style.left = left + 'px';
+
+        pop.querySelector('.gp-close').addEventListener('click', (e) => {
+          e.stopPropagation();
+          closePopover();
+        });
+
+        activePopover = pop;
+      };
+
+      document.addEventListener('click', (e) => {
+        const term = e.target.closest && e.target.closest('.glossary-term');
+        if (term) {
+          e.stopPropagation();
+          openPopover(term, term.dataset.term);
+          return;
+        }
+        if (activePopover && !e.target.closest('.glossary-popover')) closePopover();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { closePopover(); closeModal(); return; }
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('glossary-term')) {
+          e.preventDefault();
+          openPopover(e.target, e.target.dataset.term);
+        }
+      });
+
+      // ── Modal de glosario completo ──
+      function closeModal() {
+        if (activeModal) { activeModal.remove(); activeModal = null; }
+      }
+
+      const renderModalList = (filterText) => {
+        const q = (filterText || '').trim().toLowerCase();
+        const cats = [
+          { key: 'catastral', label: 'Catastral' },
+          { key: 'ambiental', label: 'Ambiental' },
+        ];
+        let html = '';
+        cats.forEach(cat => {
+          const items = (GLOSSARY_TERMS || [])
+            .filter(t => t.categoria === cat.key)
+            .filter(t => !q || t.term.toLowerCase().includes(q) || (t.definicion_simple || '').toLowerCase().includes(q))
+            .sort((a, b) => a.term.localeCompare(b.term, 'es'));
+          if (!items.length) return;
+          html += `<h4>${cat.label}</h4>`;
+          items.forEach(t => {
+            html += `<div class="glossary-entry">
+              <div class="ge-term">${escapeHtml(t.term)}</div>
+              <div class="ge-def">${escapeHtml(t.definicion_simple || '')}</div>
+              ${t.analogia ? `<div class="ge-analogy">💡 ${escapeHtml(t.analogia)}</div>` : ''}
+            </div>`;
+          });
+        });
+        if (!html) html = '<div class="glossary-modal-empty">No se encontraron términos.</div>';
+        return html;
+      };
+
+      const openModal = () => {
+        closePopover();
+        closeModal();
+        const backdrop = document.createElement('div');
+        backdrop.className = 'glossary-modal-backdrop';
+        backdrop.setAttribute('role', 'presentation');
+        backdrop.innerHTML = `
+          <div class="glossary-modal" role="dialog" aria-modal="true" aria-labelledby="glossary-modal-title">
+            <div class="glossary-modal-header">
+              <h3 id="glossary-modal-title">📖 Glosario catastral y ambiental</h3>
+              <button type="button" class="gp-close" aria-label="Cerrar glosario">✕</button>
+            </div>
+            <div class="glossary-modal-search">
+              <input type="text" id="glossary-search-input" placeholder="Buscar término o definición..." aria-label="Buscar en el glosario">
+            </div>
+            <div class="glossary-modal-body" id="glossary-modal-body"></div>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+        activeModal = backdrop;
+
+        const body = backdrop.querySelector('#glossary-modal-body');
+        body.innerHTML = renderModalList('');
+
+        const searchInput = backdrop.querySelector('#glossary-search-input');
+        searchInput.addEventListener('input', () => {
+          body.innerHTML = renderModalList(searchInput.value);
+        });
+
+        backdrop.querySelector('.gp-close').addEventListener('click', closeModal);
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) closeModal();
+        });
+
+        setTimeout(() => searchInput.focus(), 30);
+      };
+
+      load();
+
+      return { highlight, openModal, closeModal, closePopover };
+    })();
+
+    // ========== TTS MODULE (Text-to-Speech, Web Speech API nativa) ==========
+    const TTS = (() => {
+      const supported = () => typeof window !== 'undefined' && !!window.speechSynthesis;
+
+      // Regex de rango unicode de emojis (bloques comunes)
+      const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}️]/gu;
+
+      const cleanText = (text) => {
+        if (!text) return '';
+        let t = String(text);
+        // Quitar bloques de código ```...```
+        t = t.replace(/```[\s\S]*?```/g, ' ');
+        // Quitar código inline `texto`
+        t = t.replace(/`([^`]*)`/g, '$1');
+        // Links markdown [texto](url) -> texto
+        t = t.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+        // Encabezados y énfasis markdown
+        t = t.replace(/^#{1,6}\s*/gm, '');
+        t = t.replace(/\*\*(.+?)\*\*/g, '$1');
+        t = t.replace(/\*(.+?)\*/g, '$1');
+        t = t.replace(/__(.+?)__/g, '$1');
+        t = t.replace(/_(.+?)_/g, '$1');
+        // Emojis
+        t = t.replace(EMOJI_RE, '');
+        // Espacios múltiples y saltos de línea excesivos
+        t = t.replace(/\n{2,}/g, '. ').replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim();
+        return t;
+      };
+
+      // Nombres típicos de voces femeninas/masculinas en español, incluyendo el catálogo real de
+      // voces neuronales de Microsoft Azure (las que trae Windows/Edge) por país, más las de
+      // macOS/Chrome/Android. La Web Speech API no expone el género de forma estándar, así que
+      // se infiere por nombre, ignorando tildes (Windows: es-CO="Salome" mujer / "Gonzalo" hombre).
+      const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
+      const normalizeVoiceName = (s) => String(s || '').toLowerCase().normalize('NFD').replace(DIACRITICS_RE, '');
+
+      const FEMALE_VOICE_HINTS = [
+        'mujer', 'female', 'femenina',
+        // Microsoft Azure Neural por país (es-CO, es-MX, es-ES, es-AR, es-US, etc.)
+        'salome', 'elena', 'sofia', 'catalina', 'maria', 'belkys', 'ramona', 'andrea',
+        'elvira', 'abril', 'estrella', 'irene', 'laia', 'teresa', 'triana', 'vera',
+        'dalia', 'beatriz', 'candela', 'carlota', 'larissa', 'nuria', 'renata', 'ximena',
+        'yolanda', 'margarita', 'camila', 'karina', 'tania', 'lorena', 'paloma', 'valentina', 'paola',
+        'karla', 'marta',
+        // Voces clásicas de Windows/macOS/Chrome
+        'helena', 'sabina', 'laura', 'monica', 'paulina', 'lucia', 'carmen', 'ines',
+        'conchita', 'marisol', 'soledad', 'esperanza', 'isabela', 'victoria',
+        'zira', 'raquel', 'angelica',
+      ];
+      const MALE_VOICE_HINTS = [
+        'hombre', 'male', 'masculino',
+        // Microsoft Azure Neural por país
+        'gonzalo', 'tomas', 'marcelo', 'lorenzo', 'juan', 'manuel', 'emilio', 'luis',
+        'alvaro', 'arnau', 'dario', 'elias', 'nil', 'saul', 'teo', 'andres',
+        'cecilio', 'gerardo', 'liberto', 'pelayo', 'yago', 'federico', 'roberto',
+        'alex', 'victor', 'mario', 'rodrigo', 'alonso', 'mateo', 'sebastian',
+        // Voces clásicas de Windows/macOS/Chrome
+        'jorge', 'pablo', 'raul', 'diego', 'carlos', 'miguel', 'enrique', 'ricardo',
+        'fernando', 'felipe', 'santiago', 'pedro', 'david',
+      ];
+
+      const pickVoice = () => {
+        const voices = speechSynthesis.getVoices() || [];
+        if (!voices.length) return null;
+
+        const esVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+        const pool = esVoices.length ? esVoices : voices;
+
+        const hasHint = (name, hints) => {
+          const n = normalizeVoiceName(name);
+          return hints.some(h => new RegExp('\\b' + h + '\\b').test(n));
+        };
+        const isFemale = (v) => {
+          if (v.gender && String(v.gender).toLowerCase() === 'female') return true;
+          return hasHint(v.name, FEMALE_VOICE_HINTS);
+        };
+        const isMale = (v) => {
+          if (v.gender && String(v.gender).toLowerCase() === 'male') return true;
+          return hasHint(v.name, MALE_VOICE_HINTS);
+        };
+        const byLangPref = (list) => {
+          const byLang = (prefix) => list.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix));
+          return byLang('es-co') || byLang('es-419') || byLang('es-es') || byLang('es') || list[0] || null;
+        };
+
+        const femaleVoices = pool.filter(isFemale);
+        if (femaleVoices.length) return byLangPref(femaleVoices);
+
+        // Sin coincidencia de nombre femenino conocida: al menos evitar voces masculinas identificables.
+        const nonMaleVoices = pool.filter(v => !isMale(v));
+        if (nonMaleVoices.length) return byLangPref(nonMaleVoices);
+
+        return byLangPref(pool);
+      };
+
+      const speak = (text) => {
+        if (!supported()) return;
+        const cleaned = cleanText(text);
+        if (!cleaned) return;
+
+        // Cancelar cualquier síntesis en curso para no solapar respuestas
+        speechSynthesis.cancel();
+
+        const utter = new SpeechSynthesisUtterance(cleaned);
+        const voice = pickVoice();
+        if (voice) {
+          utter.voice = voice;
+          utter.lang = voice.lang;
+        } else {
+          utter.lang = 'es-ES';
+          // Algunas voces se cargan de forma asíncrona; reintentar una vez.
+          if (typeof speechSynthesis.onvoiceschanged !== 'undefined') {
+            speechSynthesis.onvoiceschanged = () => {
+              const v = pickVoice();
+              if (v) { utter.voice = v; utter.lang = v.lang; }
+            };
+          }
+        }
+
+        document.body.classList.add('tts-speaking');
+        utter.onend = () => document.body.classList.remove('tts-speaking');
+        utter.onerror = () => document.body.classList.remove('tts-speaking');
+
+        speechSynthesis.speak(utter);
+      };
+
+      const stop = () => {
+        if (!supported()) return;
+        speechSynthesis.cancel();
+        document.body.classList.remove('tts-speaking');
+      };
+
+      return { supported, cleanText, speak, stop };
+    })();
+
     // ========== CHAT MODULE ==========
     const ChatModule = (() => {
       let sessionId = 'web_' + Date.now();
       let mediaRecorder = null, audioChunks = [], isRecording = false;
       let abortCtrl = null;   // AbortController activo
+      let _firstLoad = true;  // solo muestra saludo completo la primera vez
 
       // ── Helpers UI ──────────────────────────────────────────────
       const $ = (id) => document.getElementById(id);
@@ -1341,6 +2176,7 @@
           div.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
         } else if (role === 'bot' && cls !== 'error') {
           div.innerHTML = renderMd(text);
+          GlossaryModule.highlight(div);
         } else if (role === 'system') {
           div.innerHTML = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
         } else {
@@ -1370,6 +2206,212 @@
           row.appendChild(b);
         });
         afterEl.insertAdjacentElement('afterend', row);
+      };
+
+      // ── TTS via edge-tts API (voz femenina colombiana) ────────────────
+      const speakViaAPI = async (text) => {
+        if (!text || !text.trim()) return;
+        const r = await fetch(API + '/api/v1/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.trim() })
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        const playPromise = audio.play();
+        return { audio, url, playPromise };
+      };
+
+      const safeSpeakViaAPI = async (text) => {
+        try {
+          return await speakViaAPI(text);
+        } catch (e) {
+          console.warn('TTS API falló, usando Web Speech API:', e);
+          TTS.speak(text);
+          return null;
+        }
+      };
+
+      // ── Locutor en streaming: habla frase por frase MIENTRAS escribe ──
+      // Extrae frases completas del texto que va llegando, pre-genera el audio
+      // de cada una en paralelo (voz colombiana edge-tts) y las reproduce en
+      // orden estricto, sin solaparse.
+      const StreamSpeaker = (() => {
+        let started = false, cancelled = false;
+        let spokenUpTo = 0;          // nº de chars ya encolados
+        let jobs = [];               // cola ordenada de audios
+        let playing = false;
+        let currentAudio = null, currentUrl = null;
+
+        const enFenceAbierta = (t) => (((t.match(/```/g) || []).length) % 2) === 1;
+
+        const limpiar = (t) => {
+          if (!t) return '';
+          return t.replace(/```[\s\S]*?```/g, ' ')
+                  .replace(/`([^`]*)`/g, '$1')
+                  .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+                  .replace(/https?:\/\/\S+/g, '')
+                  .replace(/[#*_>|~]/g, ' ')
+                  .replace(/\s{2,}/g, ' ')
+                  .trim();
+        };
+
+        const generar = async (texto) => {
+          const limpio = limpiar(texto);
+          if (!limpio || limpio.length < 2) return null;
+          try {
+            const r = await fetch(API + '/api/v1/tts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: limpio })
+            });
+            if (!r.ok) return null;
+            return URL.createObjectURL(await r.blob());
+          } catch (_) { return null; }
+        };
+
+        const reproducir = async () => {
+          if (playing) return;
+          playing = true;
+          document.body.classList.add('tts-speaking');
+          while (jobs.length && !cancelled) {
+            const url = await jobs.shift();
+            if (cancelled) { if (url) URL.revokeObjectURL(url); break; }
+            if (!url) continue;
+            await new Promise((resolve) => {
+              const audio = new Audio(url);
+              currentAudio = audio; currentUrl = url;
+              audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.play().catch(() => { URL.revokeObjectURL(url); resolve(); });
+            });
+            currentAudio = null; currentUrl = null;
+          }
+          playing = false;
+          if (!jobs.length) document.body.classList.remove('tts-speaking');
+        };
+
+        const encolar = (texto) => {
+          jobs.push(generar(texto));   // prefetch inmediato, en paralelo
+          reproducir();                // reproduce en orden (guardado por `playing`)
+        };
+
+        const feed = (fullText) => {
+          if (!started || cancelled) return;
+          let safeEnd = fullText.length;
+          if (enFenceAbierta(fullText)) {         // no leer dentro de un bloque ``` abierto
+            const idx = fullText.lastIndexOf('```');
+            if (idx > spokenUpTo) safeEnd = idx; else return;
+          }
+          const pend = fullText.slice(spokenUpTo, safeEnd);
+          // Último límite de frase confirmado (puntuación seguida de espacio, o salto de línea)
+          let corte = -1;
+          for (let i = pend.length - 1; i >= 0; i--) {
+            const c = pend[i];
+            if (c === '\n') { corte = i; break; }
+            if ('.!?…:;'.includes(c)) {
+              const nxt = pend[i + 1];
+              if (nxt === undefined) continue;    // esperar el siguiente carácter
+              if (/\s/.test(nxt)) { corte = i; break; }
+            }
+          }
+          if (corte < 0) return;                  // aún no hay frase completa
+          const chunk = pend.slice(0, corte + 1);
+          spokenUpTo += corte + 1;
+          if (limpiar(chunk).length >= 3) encolar(chunk);
+        };
+
+        const finish = (fullText) => {
+          if (!started || cancelled) return;
+          const resto = fullText.slice(spokenUpTo);
+          spokenUpTo = fullText.length;
+          if (limpiar(resto).length >= 2) encolar(resto);
+        };
+
+        const stop = () => {
+          cancelled = true; started = false; jobs = [];
+          if (currentAudio) { try { currentAudio.pause(); } catch (_) {} }
+          if (currentUrl) { try { URL.revokeObjectURL(currentUrl); } catch (_) {} }
+          currentAudio = null; currentUrl = null; playing = false;
+          document.body.classList.remove('tts-speaking');
+        };
+
+        const start = () => {
+          stop();
+          started = true; cancelled = false; spokenUpTo = 0; jobs = [];
+        };
+
+        const wasStarted = () => started;
+
+        return { start, feed, finish, stop, wasStarted };
+      })();
+
+      // ── Controles de voz (TTS) por mensaje del bot ────────────────
+      const addTtsControls = (afterEl, text) => {
+        const row = document.createElement('div');
+        row.className = 'tts-row';
+
+        const listenBtn = document.createElement('button');
+        listenBtn.className = 'tts-btn';
+        listenBtn.type = 'button';
+        listenBtn.textContent = '🔊 Escuchar';
+        listenBtn.setAttribute('aria-label', 'Escuchar respuesta en voz alta (voz colombiana)');
+        listenBtn.title = 'Escuchar respuesta en voz alta (voz colombiana)';
+        listenBtn.onclick = async () => {
+          listenBtn.disabled = true;
+          const result = await safeSpeakViaAPI(text);
+          if (result) {
+            result.audio.onended = () => { listenBtn.disabled = false; };
+            result.audio.onerror = () => { listenBtn.disabled = false; };
+          } else {
+            listenBtn.disabled = false;
+          }
+        };
+
+        const stopBtn = document.createElement('button');
+        stopBtn.className = 'tts-btn tts-stop';
+        stopBtn.type = 'button';
+        stopBtn.textContent = '⏹ Detener';
+        stopBtn.setAttribute('aria-label', 'Detener lectura en voz alta');
+        stopBtn.title = 'Detener lectura en voz alta';
+        stopBtn.onclick = () => {
+          TTS.stop();
+          StreamSpeaker.stop();
+          stopBtn.classList.remove('active');
+        };
+
+        row.appendChild(listenBtn);
+        row.appendChild(stopBtn);
+        afterEl.insertAdjacentElement('afterend', row);
+        return row;
+      };
+
+      // ── TTS via edge-tts API para botón global 🔊 ────────────────
+      const playLastResponseTTS = async () => {
+        const messages = document.querySelectorAll('.chat-msg.bot');
+        if (!messages.length) return;
+        
+        const lastBotMsg = messages[messages.length - 1];
+        const text = lastBotMsg.innerText || lastBotMsg.textContent || '';
+        if (!text || !text.trim()) return;
+
+        const btn = $('tts-btn');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = '⏳';
+        }
+
+        const result = await safeSpeakViaAPI(text.trim());
+        
+        if (btn) {
+          btn.textContent = '🔊';
+          btn.disabled = false;
+        }
+        if (result) {
+          result.audio.onended = () => { if (btn) btn.textContent = '🔊'; };
+        }
       };
 
       // ── Parser SSE — renderizado inmediato, sin buffer de RAF ──
@@ -1443,22 +2485,47 @@
         addMsg(msg, 'user');
         const botDiv = addMsg('', 'bot', 'loading');
         setBusy(true);
+        StreamSpeaker.stop();   // cortar cualquier locución anterior
         abortCtrl = new AbortController();
 
-        const body = { message: msg, session_id: sessionId };
+        const body = { message: msg, session_id: sessionId, community_mode: CommunityMode.isActive() };
         const raw = geoInput?.value || '';
         if (raw) try { body.geojson = JSON.parse(raw); } catch(_) {}
 
-        const finalize = (text, isError) => {
+          const finalize = (text, isError) => {
+          if (text.includes('does not support image') || text.includes('Cannot read')) {
+            text = '⚠️ El modelo actual no puede procesar imágenes. Si subiste un archivo, asegúrate de que sea un documento de texto o PDF.';
+            isError = true;
+          }
           botDiv.className = 'chat-msg bot' + (isError ? ' error' : '');
           botDiv.innerHTML = isError
             ? `<span>⚠️ ${text}</span><button class="chip-btn" style="margin-left:8px" onclick="ChatModule.retry()">↩ Reintentar</button>`
             : renderMd(text);
+          if (!isError) GlossaryModule.highlight(botDiv);
           scrollBottom(botDiv);
-          if (!isError) addChips(botDiv);
+          let lastEl = botDiv;
+          let ttsRow = null;
+          if (!isError && TTS.supported()) {
+            ttsRow = addTtsControls(botDiv, text);
+            lastEl = ttsRow;
+          }
+          if (!isError) addChips(lastEl);
           setBusy(false);
           abortCtrl = null;
           input.focus();
+          // Auto-lectura en voz alta: usa edge-tts (voz colombiana), fallback Web Speech API
+          if (!isError && AutoSpeak.isActive()) {
+            if (StreamSpeaker.wasStarted()) {
+              // Ya fue hablando frase por frase mientras escribía: solo drenar el resto.
+              StreamSpeaker.finish(text);
+              ttsRow?.querySelector('.tts-stop')?.classList.add('active');
+            } else {
+              // Ruta sin streaming (fallback): leer la respuesta completa de una vez.
+              safeSpeakViaAPI(text).then(r => {
+                if (r) ttsRow?.querySelector('.tts-stop')?.classList.add('active');
+              });
+            }
+          }
         };
 
         // ── 1. Intentar streaming ──
@@ -1474,12 +2541,14 @@
 
           botDiv.className = 'chat-msg bot';
           botDiv.innerHTML = '';
+          if (AutoSpeak.isActive()) StreamSpeaker.start();
 
           await parseSSE(
             r,
             (text) => {
               botDiv.innerHTML = renderMd(text, true);
               scrollBottom(botDiv);
+              if (AutoSpeak.isActive()) StreamSpeaker.feed(text);
             },
             (text) => finalize(text || '(sin respuesta)', false)
           );
@@ -1506,7 +2575,7 @@
       };
 
       // ── Cancelar streaming activo ────────────────────────────────
-      const cancelStream = () => { abortCtrl?.abort(); };
+      const cancelStream = () => { abortCtrl?.abort(); StreamSpeaker.stop(); };
 
       // ── Reintento del último mensaje ─────────────────────────────
       let _lastMsg = '';
@@ -1588,6 +2657,50 @@
         if (fi) fi.value = '';
       };
 
+      // ── Preguntas guiadas (wizard) ────────────────────────────────
+      const wizardPanelHtml = () => {
+        if (!Array.isArray(WIZARD_FLOWS) || WIZARD_FLOWS.length === 0) {
+          return '<div class="wizard-panel" id="wizard-panel"></div>';
+        }
+        const cards = WIZARD_FLOWS.map((f, i) => `
+              <button type="button" class="wizard-btn" data-wizard-index="${i}" title="${(f.description || '').replace(/"/g,'&quot;')}" onclick="ChatModule.startWizardFlow(${i})">
+                <span class="wizard-btn-title"><span class="wizard-icon">${f.icon || '💬'}</span>${f.title || ''}</span>
+                ${f.description ? `<span class="wizard-btn-desc">${f.description}</span>` : ''}
+                ${f.needs_upload ? '<span class="wizard-btn-badge">📎 Requiere subir archivo</span>' : ''}
+              </button>`).join('');
+        return `<div class="wizard-panel" id="wizard-panel">
+              <p class="wizard-panel-title">🧭 Preguntas guiadas — elige una opción para empezar</p>
+              <div class="wizard-grid">${cards}</div>
+            </div>`;
+      };
+
+      const renderWizard = () => {
+        const panel = $('wizard-panel');
+        if (!panel) return;
+        panel.outerHTML = wizardPanelHtml();
+      };
+
+      const startWizardFlow = (index) => {
+        const flow = WIZARD_FLOWS[index];
+        if (!flow) return;
+        $('welcome-banner')?.classList.add('hidden');
+        const input = $('chat-input');
+
+        if (flow.needs_upload) {
+          if (flow.upload_hint) addMsg(flow.upload_hint, 'system');
+          if (input) { input.value = flow.chat_message || ''; input.focus(); }
+          const attachBtn = $('chat-attach-btn');
+          if (attachBtn) {
+            attachBtn.classList.add('chat-attach-highlight');
+            attachBtn.focus();
+            setTimeout(() => attachBtn.classList.remove('chat-attach-highlight'), 4500);
+          }
+        } else {
+          if (input) input.value = flow.chat_message || '';
+          sendChat();
+        }
+      };
+
       // ── Reset sesión ─────────────────────────────────────────────
       const reset = () => {
         cancelStream();
@@ -1597,26 +2710,37 @@
         const wb = $('welcome-banner');
         if (wb) {
           wb.classList.remove('hidden');
-          wb.innerHTML = `<div class="chat-msg bot welcome-msg">
-            <p>¡Hola! Soy <strong>Nymaira</strong>, tu asistente para temas de catastro y terrenos. Puedo ayudarte con:</p>
-            <ul style="margin:10px 0 10px 0;padding-left:4px;list-style:none;line-height:2">
-              <li>🏠 Consultas de matrícula y avalúos</li>
-              <li>📐 Validación de linderos</li>
-              <li>📄 Trámites catastrales</li>
-              <li>🌍 Información del gobierno colombiano</li>
-            </ul>
-            <p style="color:var(--text-dim);font-size:.88rem">¿En qué te puedo colaborar?</p>
-            <div class="chips-row" style="margin-top:10px">
-              ${SUGGESTIONS.map(s=>`<button class="chip-btn" onclick="document.getElementById('chat-input').value=this.textContent;document.getElementById('chat-input').focus()">${s}</button>`).join('')}
-            </div>
-          </div>`;
+          if (_firstLoad) {
+            // Primera carga: mensaje completo con lista de capacidades
+            _firstLoad = false;
+            wb.innerHTML = `<div class="chat-msg bot welcome-msg">
+              <p>¡Hola! Soy <strong>Nymaira</strong>, tu asistente para temas de catastro y terrenos. Puedo ayudarte con:</p>
+              <ul style="margin:10px 0 10px 0;padding-left:4px;list-style:none;line-height:2">
+                <li>🏠 Consultas de matrícula y avalúos</li>
+                <li>📐 Validación de linderos</li>
+                <li>📄 Trámites catastrales</li>
+                <li>🌍 Información del gobierno colombiano</li>
+              </ul>
+              <p style="color:var(--text-dim);font-size:.88rem">¿En qué te puedo colaborar?</p>
+              <p style="color:var(--text-dim);font-size:.82rem">💡 Tip: activa <strong>Modo Comunidad</strong> arriba si prefieres respuestas más sencillas y sin tecnicismos.</p>
+              <div class="chips-row" style="margin-top:10px">
+                ${(window.SUGGESTIONS || ['Procedimiento para corrección de área', 'Calcular avalúo de terreno', 'Validar linderos de parcela', 'Buscar matrícula catastral']).map(s=>`<button class="chip-btn" onclick="document.getElementById('chat-input').value=this.textContent;document.getElementById('chat-input').focus()">${s}</button>`).join('')}
+              </div>
+              ${wizardPanelHtml()}
+            </div>`;
+          } else {
+            // Resets posteriores: saludo breve
+            wb.innerHTML = `<div class="chat-msg bot welcome-msg">
+              <p>¡Hola! ¿En qué te puedo ayudar hoy? Puedo resolver dudas sobre catastro, predios, linderos, trámites o análisis espacial. 😊</p>
+            </div>`;
+          }
         }
         msgs().innerHTML = '';
       };
 
       reset();
 
-      return { sendChat, toggleMic, uploadFile, clearFile, reset, addMsg, cancelStream, retry };
+      return { sendChat, toggleMic, uploadFile, clearFile, reset, addMsg, cancelStream, retry, renderWizard, startWizardFlow, playLastResponseTTS, wizardPanelHtml, stopSpeak: StreamSpeaker.stop };
     })();
 
     // Alias globales para compatibilidad
@@ -1797,21 +2921,72 @@
 
       const pullModel = async (modelId) => {
         const status = document.getElementById('pull-status');
-        if (status) status.innerHTML = `⏳ Descargando <strong>${modelId}</strong>... esto puede tardar varios minutos según tu internet.`;
+        const progressContainer = document.getElementById('pull-progress');
+        const progressBar = document.getElementById('pull-progress-bar');
+        const progressText = document.getElementById('pull-progress-text');
+        
+        if (status) status.innerHTML = `⏳ Iniciando descarga de <strong>${modelId}</strong>...`;
+        if (progressContainer) progressContainer.style.display = 'block';
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressText) progressText.textContent = 'Conectando a Ollama...';
+
         try {
-          const r = await fetch(API + '/api/v1/models/llm/ollama/pull', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({model: modelId}),
+          const r = await fetch(API + `/api/v1/models/llm/ollama/pull/stream?model=${encodeURIComponent(modelId)}`, {
+            method: 'GET',
+            headers: {'Accept': 'text/event-stream'},
           });
-          const data = await r.json();
-          if (r.ok) {
-            if (status) status.innerHTML = `✅ ${data.message} — Recarga la página cuando termine.`;
-          } else {
-            if (status) status.innerHTML = `❌ ${data.detail || 'Error'}`;
+          
+          if (!r.ok || !r.body) {
+            throw new Error('No se pudo conectar al stream');
+          }
+
+          const reader = r.body.getReader();
+          const dec = new TextDecoder();
+          let buf = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            
+            let nl;
+            while ((nl = buf.indexOf('\n')) !== -1) {
+              const line = buf.slice(0, nl).trimEnd();
+              buf = buf.slice(nl + 1);
+              if (!line.startsWith('data:')) continue;
+              const payload = line.slice(5).trim();
+              if (payload === '[DONE]') {
+                if (status) status.innerHTML = `✅ <strong>${modelId}</strong> descargado e instalado correctamente.`;
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressText) progressText.textContent = 'Completado';
+                return;
+              }
+              try {
+                const data = JSON.parse(payload);
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+                const statusMsg = data.status || '';
+                const completed = data.completed || 0;
+                const total = data.total || 0;
+                
+                if (status) status.innerHTML = `⬇️ <strong>${modelId}</strong> — ${statusMsg}`;
+                
+                if (total > 0 && progressBar && progressText) {
+                  const pct = Math.round((completed / total) * 100);
+                  progressBar.style.width = pct + '%';
+                  const mb = (completed / 1024 / 1024).toFixed(1);
+                  const totalMb = (total / 1024 / 1024).toFixed(1);
+                  progressText.textContent = `${pct}% (${mb} MB / ${totalMb} MB)`;
+                } else if (progressText) {
+                  progressText.textContent = statusMsg;
+                }
+              } catch (_) {}
+            }
           }
         } catch(e) {
           if (status) status.innerHTML = `❌ Error: ${e.message}`;
+          if (progressContainer) progressContainer.style.display = 'none';
         }
       };
 
@@ -1944,6 +3119,8 @@
     // Auto-conectar WFS al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
       setTimeout(cargarServidoresWFS, 500);
+      CommunityMode.init();
+      AutoSpeak.init();
     });
   </script>
 </body>
