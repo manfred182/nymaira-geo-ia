@@ -25,7 +25,8 @@ server_stderr.txt
 server_stdout.txt
 
 # Datos de runtime (memoria de aprendizaje y vector stores generados)
-data/chat_memory/
+data/chat_memory/*
+!data/chat_memory/.gitkeep
 data/faiss_db/
 data/chroma_db_test/
 
