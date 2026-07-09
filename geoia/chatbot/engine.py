@@ -524,13 +524,16 @@ async def _get_fastest_model() -> str:
                     return _FASTEST_MODEL
     except Exception:
         pass
-    return "qwen2.5:7b"
+    return "qwen2.5:1.5b"
 
 
-# Modelo de MAYOR CALIDAD para consultas normativas/catastrales (más preciso,
-# menos alucinación). Más lento en CPU, por eso solo se usa en la ruta fundamentada.
+# Modelo para consultas normativas/catastrales. En este equipo (4 núcleos, sin GPU,
+# RAM justa) se prioriza el 1.5b: con el RAG sembrado responde FUNDAMENTADO (preciso)
+# y ~2x más rápido que el 3b, y al ser el mismo modelo del chat casual no hay recarga
+# (con OLLAMA_MAX_LOADED_MODELS=1). Para más profundidad a costa de velocidad, poner
+# "qwen2.5:3b" de primero. Nunca usar 7b aquí (satura la RAM).
 _QUALITY_MODEL: str | None = None
-_MODEL_QUALITY_PRIORITY = ["qwen2.5:3b", "qwen2.5:7b", "qwen2.5:1.5b", "llama3.2:3b"]
+_MODEL_QUALITY_PRIORITY = ["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]
 
 
 async def _get_quality_model() -> str:
@@ -554,14 +557,13 @@ async def _get_quality_model() -> str:
 
 
 async def _warmup_ollama():
-    """Pre-carga en memoria el modelo rápido y el de calidad (normatividad)."""
+    """Pre-carga en memoria SOLO el modelo rápido. En equipos con poca RAM se usa
+    OLLAMA_MAX_LOADED_MODELS=1, así que precargar también el 3B solo lo expulsaría;
+    el 3B se carga bajo demanda en la primera consulta normativa."""
     import httpx
     modelos = []
     try:
         modelos.append(await _get_fastest_model())
-        q = await _get_quality_model()
-        if q not in modelos:
-            modelos.append(q)
     except Exception:
         return
     for model in modelos:

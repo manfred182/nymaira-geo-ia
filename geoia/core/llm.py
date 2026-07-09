@@ -250,7 +250,7 @@ def _check_ollama() -> str | bool:
 class OllamaLLM:
     """LLM via Ollama - ultra rápido, sin carga de modelo."""
 
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "qwen2.5:7b"):
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "qwen2.5:1.5b"):
         self._base_url = base_url
         self._model = model
         self._available = None

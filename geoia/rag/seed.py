@@ -18,23 +18,20 @@ async def seed_default_documents() -> None:
         if engine.index is None:
             return
 
-        existing_count = engine.index.ntotal if engine.index else 0
-        if existing_count > 0:
-            logger.debug(f"RAG ya tiene {existing_count} docs; se omite auto-seed.")
-            return
-
         total_files = 0
         total_chunks = 0
 
-        # Solo .md (rápido)
+        # Solo .md (rápido). upsert = idempotente por hash: si el .md no cambió no
+        # re-embebe, así reiniciar el servidor NO vuelve a sembrar todo.
         seed_dir = settings.data_dir / "rag_seed"
         if seed_dir.exists():
             for md_path in sorted(seed_dir.glob("*.md")):
                 try:
                     content = md_path.read_bytes()
-                    chunks = await asyncio.to_thread(engine.ingest_document, md_path.name, content)
-                    total_files += 1
-                    total_chunks += chunks
+                    res = await asyncio.to_thread(engine.upsert_document, md_path.name, content)
+                    if res.get("chunks"):
+                        total_files += 1
+                        total_chunks += res["chunks"]
                 except Exception as e:
                     logger.error(f"Error al sembrar '{md_path.name}': {e}")
 
@@ -73,15 +70,15 @@ async def seed_pdfs_background() -> None:
             if size_mb > 100:
                 logger.warning(f"PDF muy grande ({size_mb:.0f} MB), se omite: {pdf_path.name}")
                 continue
-            # Idempotente: si el PDF ya está ingestado, no lo vuelvas a cargar
-            ya = any(pdf_path.name == m.get("source") for m in engine.metadatas)
-            if ya:
-                logger.info(f"PDF ya ingestado, se omite: {pdf_path.name}")
-                continue
             try:
                 content = pdf_path.read_bytes()
-                chunks = await asyncio.to_thread(engine.ingest_document, pdf_path.name, content)
-                logger.info(f"PDF ingestado: {pdf_path.name} ({size_mb:.1f} MB) -> {chunks} chunks")
+                # upsert = idempotente por hash: si no cambió, no re-embebe (status
+                # 'unchanged'); si es nuevo o cambió, ingesta/actualiza sin duplicar.
+                res = await asyncio.to_thread(engine.upsert_document, pdf_path.name, content)
+                if res.get("status") == "unchanged":
+                    logger.info(f"PDF sin cambios, se omite: {pdf_path.name}")
+                else:
+                    logger.info(f"PDF {res.get('status')}: {pdf_path.name} ({size_mb:.1f} MB) -> {res.get('chunks')} chunks")
                 gc.collect()
             except Exception as e:
                 logger.error(f"Error al ingestar PDF '{pdf_path.name}': {e}")
