@@ -12,7 +12,7 @@
 #>
 $ErrorActionPreference = "Stop"
 
-$OllamaModels = "D:\ollama-models"          # ruta SIN acento (clave del arreglo)
+$OllamaModels = "D:\Ollama Models"          # carpeta del usuario (sin acento; el espacio no da problema)
 $ModeloChat   = "qwen2.5:1.5b"
 $Puerto       = 8602
 $ProyectoDir  = Split-Path -Parent $PSScriptRoot
