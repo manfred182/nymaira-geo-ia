@@ -49,4 +49,8 @@ if ($modelos -contains $ModeloChat) {
 Set-Location $ProyectoDir
 $py = Join-Path $ProyectoDir "venv\Scripts\python.exe"
 Write-Host "Arrancando Nymaira en http://127.0.0.1:$Puerto ..." -ForegroundColor Cyan
+Write-Host "(Abre http://127.0.0.1:$Puerto en el navegador. Ctrl+C para detener.)" -ForegroundColor DarkGray
+# uvicorn escribe sus logs por stderr; en PowerShell 5.1 eso dispara NativeCommandError
+# y con ErrorActionPreference='Stop' mataría el servidor. Se baja a 'Continue' aquí.
+$ErrorActionPreference = "Continue"
 & $py -m uvicorn geoia.api.main:app --host 127.0.0.1 --port $Puerto
