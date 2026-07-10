@@ -242,7 +242,10 @@ def _extraer_tema(message: str) -> tuple[str | None, bool, bool]:
         return "todas", False, True
     if any(w in m for w in ("catastr", "matricula", "avaluo", "lindero", "predio",
                             "registro", "igac", "snr", "snrp", "geoport", "icde",
-                            "cartograf", "predial", "codigo catastral", "geoportal")):
+                            "cartograf", "predial", "codigo catastral", "geoportal",
+                            "notaria", "notarial", "vur", "escritura publica",
+                            "alcaldia", "gobernacion", "villavicencio",
+                            "administracion municipal", "municipio")):
         return "catastral", True, False
     if any(w in m for w in ("buffer", "clip", "recort", "dissolve", "disolver",
                             "centroid", "reproyect", "simplif", "fix geometry",
@@ -251,11 +254,13 @@ def _extraer_tema(message: str) -> tuple[str | None, bool, bool]:
     if any(w in m for w in ("ambient", "licencia ambient", "ideam", "anla", "siac",
                             "parque nacional", "car", "agua", "bosque", "fauna",
                             "flora", "mineria", "hidrocarbur", "anh", "anm", "clima",
-                            "cambio climatico", "ecosistem", "cuenca")):
+                            "cambio climatico", "ecosistem", "cuenca", "cormacarena")):
         return "ambiental", False, False
     if any(w in m for w in ("productiv", "agricol", "rural", "upra", "tierra",
                             "cultivo", "agro", "agrosavia", "ica", "finagro",
-                            "banco agrario", "frontera agricola", "aptitud suelo")):
+                            "banco agrario", "frontera agricola", "aptitud suelo",
+                            "renovacion del territorio", "renovacion territorio",
+                            "agencia de renovacion", "pdet", "art ")):
         return "productiva", False, False
     if any(w in m for w in ("salud", "educacion", "trabajo", "icbf", "sena",
                             "dps", "ciencia", "cultura", "deporte", "bienestar")):
@@ -700,9 +705,10 @@ class ChatbotEngine:
         else:
             tasks.append(asyncio.sleep(0, result=[]))
 
-        # Consultar RAG para CUALQUIER tema catastral (no solo si menciona "norma"):
-        # la base tiene la 1040, la Ley 2294 y la guía oficial de catastro multipropósito.
-        if es_norma or categoria == "catastral":
+        # Consultar RAG para CUALQUIER consulta con tema (no solo catastral): la base
+        # tiene la 1040, la Ley 2294, la guía de catastro multipropósito y la guía de
+        # instituciones (ART, ANT, SNR/Notarías, Cormacarena, alcaldías, Parques…).
+        if es_norma or categoria:
             try:
                 from geoia.api.routes.rag import get_engine as get_rag_engine
                 rag = await get_rag_engine()
@@ -879,7 +885,11 @@ class ChatbotEngine:
                 "NUNCA repitas frases ni palabras; di cada idea una sola vez. "
                 "NO escribas URLs ni inventes enlaces; el sistema añade las fuentes al final. "
                 "No inventes leyes, siglas ni cifras: si no lo sabes, dilo. "
-                "Conoces: IGAC Base Catastral, Resolución 1040/2023, WFS colombianos, normativa catastral."
+                "Conoces y puedes orientar sobre trámites de estas instituciones: IGAC (catastro), "
+                "SNR/SuperNotariado y Notarías (registro y matrícula), ANT (tierras), ART (renovación "
+                "del territorio), Cormacarena (ambiental en el Meta), Parques Nacionales, y la "
+                "Administración Municipal (Gobernación del Meta, Alcaldía de Villavicencio). También: "
+                "Base Catastral Nacional del IGAC, Resolución 1040/2023 y WFS colombianos en vivo."
             )
 
         # ── Búsqueda web async (fire-and-forget) para enriquecer respuesta ──

@@ -31,6 +31,19 @@ _QUERY_ALIASES: list[dict] = [
      "expansion": "prefijos del código homologado de identificación predial"},
     {"disparadores": ["documentación", "entrega"],
      "expansion": "documentación mínima para entrega"},
+    # ── Instituciones (guía instituciones_catastro_meta.md) ──
+    {"disparadores": ["art ", "la art", "renovacion del territorio", "renovacion territorio", "pdet"],
+     "expansion": "ART Agencia de Renovación del Territorio PDET desarrollo rural con enfoque territorial"},
+    {"disparadores": ["parque nacional", "parques nacionales", "area protegida", "sinap"],
+     "expansion": "Parques Nacionales Naturales áreas protegidas SINAP restricción de uso del suelo"},
+    {"disparadores": ["ant ", "agencia nacional de tierras", "baldio", "formalizacion", "adjudicacion"],
+     "expansion": "ANT Agencia Nacional de Tierras formalización y adjudicación de baldíos propiedad rural"},
+    {"disparadores": ["notaria", "notarial", "escritura", "certificado de tradicion", "tradicion y libertad"],
+     "expansion": "notaría escritura pública certificado de tradición y libertad matrícula inmobiliaria SNR VUR ORIP"},
+    {"disparadores": ["cormacarena"],
+     "expansion": "Cormacarena autoridad ambiental del Meta licencias y permisos ambientales POMCA"},
+    {"disparadores": ["alcaldia", "predial", "impuesto predial", "gobernacion", "municipal", " pot ", "usos del suelo"],
+     "expansion": "administración municipal alcaldía impuesto predial POT ordenamiento territorial usos del suelo"},
 ]
 
 
@@ -136,6 +149,12 @@ class RAGEngine:
         source = metadata.get("source", "")
         if source.endswith(".md"):
             score += 6.0
+
+        # Guía curada de instituciones (ART, ANT, SNR/Notarías, Cormacarena, alcaldías…):
+        # empujón extra para que surja en consultas sobre trámites institucionales, donde
+        # compite con los 741 chunks de la Resolución 1040.
+        if source == "instituciones_catastro_meta.md":
+            score += 2.5
 
         # Q&A APRENDIDO del propio chat: útil pero NO autoritativo (es texto
         # generado por un modelo pequeño). Prioridad baja: solo aflora cuando las
