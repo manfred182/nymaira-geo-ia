@@ -490,6 +490,24 @@ def _build_system_prompt(community_mode: bool = False, contexto_extra: str = "")
             "Nunca inventes direcciones web.\n"
             "4. NUNCA repitas frases ni palabras; cada idea una sola vez."
         )
+    # ── ESTILO DE RESPUESTA (aplica a ambos modos) ──────────────────────
+    # Estructura pedagógica pedida: definición simple → componentes numerados con
+    # pregunta guía → un ejemplo cotidiano en cada punto → cierre "En resumen".
+    prompt += (
+        "\n\nFORMATO DE RESPUESTA — sigue SIEMPRE esta estructura al explicar un tema:\n"
+        "1. Abre con el **tema en negrita** y una definición en UNA sola frase sencilla.\n"
+        "2. Si el tema tiene partes, divídelo en componentes o pasos NUMERADOS. Cada subtítulo "
+        "lleva una PREGUNTA GUÍA entre paréntesis. Ejemplo de subtítulo: "
+        "\"1. Componente físico (¿Cómo es el predio?)\".\n"
+        "3. Bajo cada punto: una explicación corta y, en un renglón aparte, un caso real que "
+        "empiece con \"Ejemplo:\" usando situaciones cotidianas (una finca, una casa que pasó de "
+        "uno a dos pisos, un cambio de propietario, un desenglobe de un lote).\n"
+        "4. Si hay procesos o pasos, lístalos con su nombre en negrita, una frase y su \"Ejemplo:\".\n"
+        "5. Cierra SIEMPRE con una línea que empiece con \"**En resumen:**\" y resuma la idea en "
+        "una sola frase.\n"
+        "Usa lenguaje sencillo y cercano; el objetivo es que CUALQUIER persona lo entienda, "
+        "aunque no sepa de catastro."
+    )
     if contexto_extra:
         prompt += contexto_extra
     return prompt
@@ -538,7 +556,10 @@ async def _get_fastest_model() -> str:
 # (con OLLAMA_MAX_LOADED_MODELS=1). Para más profundidad a costa de velocidad, poner
 # "qwen2.5:3b" de primero. Nunca usar 7b aquí (satura la RAM).
 _QUALITY_MODEL: str | None = None
-_MODEL_QUALITY_PRIORITY = ["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]
+# 3B primero: sigue mejor el formato pedagógico y es más fiel al contexto (menos
+# alucinación) que el 1.5b. Más lento en CPU, pero solo se usa en la ruta fundamentada
+# (consultas normativas/explicativas). El casual sigue en 1.5b (instantáneo).
+_MODEL_QUALITY_PRIORITY = ["qwen2.5:3b", "qwen2.5:1.5b", "llama3.2:3b"]
 
 
 async def _get_quality_model() -> str:
@@ -889,7 +910,11 @@ class ChatbotEngine:
                 "SNR/SuperNotariado y Notarías (registro y matrícula), ANT (tierras), ART (renovación "
                 "del territorio), Cormacarena (ambiental en el Meta), Parques Nacionales, y la "
                 "Administración Municipal (Gobernación del Meta, Alcaldía de Villavicencio). También: "
-                "Base Catastral Nacional del IGAC, Resolución 1040/2023 y WFS colombianos en vivo."
+                "Base Catastral Nacional del IGAC, Resolución 1040/2023 y WFS colombianos en vivo.\n\n"
+                "FORMATO al explicar: abre con el **tema en negrita** y una definición en una frase; "
+                "si tiene partes, divídelas en puntos NUMERADOS con una pregunta guía entre paréntesis; "
+                "da un caso real que empiece con \"Ejemplo:\" en cada punto; cierra con una línea "
+                "\"**En resumen:**\". Lenguaje sencillo para que cualquiera lo entienda."
             )
 
         # ── Búsqueda web async (fire-and-forget) para enriquecer respuesta ──
