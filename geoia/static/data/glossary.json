@@ -408,5 +408,146 @@
     "categoria": "ambiental",
     "definicion_simple": "Zona declarada por ley para conservar bosques y controlar su uso o aprovechamiento.",
     "analogia": "Es como un bosque apartado especialmente para que no se acabe con tala o quema descontrolada."
+  },
+  {
+    "term": "Predio omiso",
+    "aliases": [
+      "predio omiso",
+      "omiso",
+      "finca no aparece"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Su finca NO aparece en el mapa oficial del catastro; hay que pedir que la incluyan.",
+    "analogia": "Es como si tu casa no saliera en el directorio del pueblo: existe, pero el gobierno no la tiene anotada."
+  },
+  {
+    "term": "Falsa tradición",
+    "aliases": [
+      "falsa tradicion",
+      "falsa tradición"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Usted compró con carta de venta, pero le falta registrar la escritura real a su nombre.",
+    "analogia": "Es como tener el celular en la mano pero sin haberlo puesto a tu nombre en la factura."
+  },
+  {
+    "term": "Carta de venta",
+    "aliases": [
+      "carta de venta",
+      "carta venta",
+      "compraventa informal"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Papel informal de compraventa que NO está registrado; sirve de prueba pero no da propiedad plena.",
+    "analogia": "Como un recibo escrito a mano: demuestra que pagaste, pero no es el título oficial."
+  },
+  {
+    "term": "Baldío",
+    "aliases": [
+      "baldio",
+      "terreno baldio",
+      "tierra baldia"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Terreno de la Nación que nadie tiene con título; se solicita a la Agencia Nacional de Tierras (ANT).",
+    "analogia": "Tierra del Estado que todavía no tiene dueño legal."
+  },
+  {
+    "term": "Posesión",
+    "aliases": [
+      "posesion",
+      "sana posesion",
+      "poseer",
+      "poseedor"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Ocupar y trabajar un predio como si fuera suyo, sin tener aún el título registrado.",
+    "analogia": "Vivir y cuidar la casa como propia, aunque el papel todavía no esté a tu nombre."
+  },
+  {
+    "term": "Ocupante",
+    "aliases": [
+      "ocupante"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Persona que usa un terreno baldío de la Nación sin ser todavía la propietaria.",
+    "analogia": "El que trabaja la tierra del Estado esperando que se la formalicen."
+  },
+  {
+    "term": "Sanear",
+    "aliases": [
+      "sanear",
+      "saneamiento",
+      "sanear predio",
+      "arreglar papeles"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Arreglar los papeles del predio para que quede legalmente a su nombre.",
+    "analogia": "Poner en regla todos los documentos, como ponerse al día con las cuotas."
+  },
+  {
+    "term": "Desenglobe",
+    "aliases": [
+      "desenglobe",
+      "dividir lote",
+      "dividir predio"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Dividir un lote grande en varios predios independientes, cada uno con su número.",
+    "analogia": "Partir una finca en pedazos y darle a cada pedazo su propia cédula."
+  },
+  {
+    "term": "Englobe",
+    "aliases": [
+      "englobe",
+      "unir predios"
+    ],
+    "categoria": "catastral",
+    "definicion_simple": "Unir varios predios vecinos en uno solo.",
+    "analogia": "Juntar varios lotes para que queden como una sola finca."
+  },
+  {
+    "term": "Certificado de tradición y libertad",
+    "aliases": [
+      "certificado de tradicion",
+      "tradicion y libertad",
+      "certificado de libertad"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Documento que muestra la historia de dueños del predio y si tiene deudas, hipotecas o pleitos.",
+    "analogia": "Es como el historial médico del predio: cuenta todo lo que le ha pasado."
+  },
+  {
+    "term": "Agencia Nacional de Tierras (ANT)",
+    "aliases": [
+      "ant",
+      "agencia nacional de tierras",
+      "agencia de tierras"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Entidad que formaliza y adjudica tierras rurales y baldíos a los campesinos.",
+    "analogia": "La oficina del gobierno que ayuda a que la tierra quede legalmente a tu nombre."
+  },
+  {
+    "term": "Agencia de Renovación del Territorio (ART)",
+    "aliases": [
+      "art",
+      "agencia de renovacion del territorio",
+      "renovacion del territorio",
+      "pdet"
+    ],
+    "categoria": "juridica",
+    "definicion_simple": "Coordina proyectos de desarrollo (PDET) en las zonas más afectadas por el conflicto.",
+    "analogia": "La entidad que impulsa obras y proyectos para el campo con la comunidad."
+  },
+  {
+    "term": "Cormacarena",
+    "aliases": [
+      "cormacarena",
+      "corporacion macarena"
+    ],
+    "categoria": "ambiental",
+    "definicion_simple": "Autoridad ambiental del Meta; da los permisos y licencias ambientales de la región.",
+    "analogia": "La oficina que cuida el medio ambiente en el Meta y dice qué se puede hacer en la tierra."
   }
 ]

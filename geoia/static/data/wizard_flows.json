@@ -55,5 +55,33 @@
     "description": "Pregunta sobre la Resolución 1040 de 2023 y procedimientos catastrales",
     "needs_upload": false,
     "chat_message": "Explícame la Resolución 1040 de 2023"
+  },
+  {
+    "icon": "🗺️",
+    "title": "Buscar mi finca en el mapa",
+    "description": "Ubica tu finca y compara el lindero que pintó el IGAC con tu cerca real (funciona con GPS, hasta sin internet si descargas el mapa antes).",
+    "needs_upload": false,
+    "chat_message": "¿Cómo busco y ubico mi finca en el mapa del IGAC, incluso sin internet?"
+  },
+  {
+    "icon": "👤",
+    "title": "¿Quién aparece como dueño?",
+    "description": "Paso a paso para consultar en la Superintendencia de Notariado (SNR) el estado de tu predio usando solo tu número de cédula.",
+    "needs_upload": false,
+    "chat_message": "Enséñame el paso a paso para consultar quién aparece como dueño de un predio en la SNR con mi cédula."
+  },
+  {
+    "icon": "🚦",
+    "title": "Ruta de Alertas ambientales",
+    "description": "Revisa si tu finca está tocando una zona protegida de Cormacarena o Parques Nacionales.",
+    "needs_upload": false,
+    "chat_message": "¿Cómo sé si mi finca está tocando una zona protegida de Cormacarena o Parques Nacionales?"
+  },
+  {
+    "icon": "🟢",
+    "title": "Semáforo de mis papeles",
+    "description": "Verde, amarillo o rojo: entiende en qué estado están los papeles de tu finca y qué hacer en cada caso.",
+    "needs_upload": false,
+    "chat_message": "Explícame el semáforo de los papeles de mi finca: qué significa verde, amarillo y rojo y qué debo hacer."
   }
 ]
