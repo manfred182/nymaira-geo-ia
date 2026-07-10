@@ -647,7 +647,7 @@ class ChatbotEngine:
                     "http://localhost:11434/api/chat",
                     json={"model": await _get_fastest_model(), "messages": messages, "stream": False,
                           "keep_alive": -1,
-                          "options": {"num_predict": 640, "temperature": 0.2, "num_ctx": 4096,
+                          "options": {"num_predict": 420, "temperature": 0.2, "num_ctx": 4096,
                                       "num_thread": 4, "num_gpu": 99, "top_k": 40, "top_p": 0.85,
                                       "repeat_penalty": 1.2, "repeat_last_n": 320,
                                       "frequency_penalty": 0.6, "presence_penalty": 0.3}},
@@ -812,7 +812,7 @@ class ChatbotEngine:
                     "\n\nUsa EXCLUSIVAMENTE estos datos de fuentes oficiales para fundamentar tu "
                     "respuesta. Si algún dato no está aquí ni lo sabes con certeza, dilo y recomienda "
                     "verificar con el IGAC. NO escribas URLs ni inventes enlaces (el sistema añade las "
-                    "fuentes al final). No repitas frases.\n\n" + contexto[:2600])
+                    "fuentes al final). No repitas frases.\n\n" + contexto[:1800])
             history_g = self.sessions[session_id][-4:]
             chat_g = [{"role": "system", "content": system_g}] + history_g
 
@@ -997,7 +997,7 @@ class ChatbotEngine:
                         "keep_alive": -1,
                         "options": {
                             "temperature": 0.2,
-                            "num_predict": 640,
+                            "num_predict": 420,
                             "num_ctx": 4096,
                             "num_thread": 4,   # = núcleos FÍSICOS del i7-1165G7; medido +5% vs auto, y 8 (hyperthreads) es peor
                             "num_gpu": 99,
